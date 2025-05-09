@@ -25,7 +25,7 @@ model Category {
 
 model Video {
   id           Int         @id @default(autoincrement())
-  videoId      String?     @unique // YouTube video ID
+  videoId      String      @unique // YouTube video ID
   title        String
   description  String?
   url          String      @unique // URL to the video file or platform

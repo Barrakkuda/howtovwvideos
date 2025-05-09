@@ -57,6 +57,7 @@ async function main() {
     where: { url: "https://example.com/video/nextjs-basics" },
     update: {},
     create: {
+      videoId: Math.random().toString(36).substring(2, 12),
       title: "Next.js 101: The Basics",
       description: "A beginner-friendly introduction to Next.js.",
       url: "https://example.com/video/nextjs-basics",
@@ -70,6 +71,7 @@ async function main() {
     where: { url: "https://example.com/video/prisma-setup" },
     update: {},
     create: {
+      videoId: Math.random().toString(36).substring(2, 12),
       title: "Setting up Prisma with PostgreSQL",
       description:
         "Learn how to quickly set up Prisma ORM with a PostgreSQL database.",
@@ -84,6 +86,7 @@ async function main() {
     where: { url: "https://example.com/video/our-new-feature-X" },
     update: {},
     create: {
+      videoId: Math.random().toString(36).substring(2, 12),
       title: "Introducing Feature X!",
       description: "Check out our latest and greatest Feature X in action.",
       url: "https://example.com/video/our-new-feature-X",
@@ -97,6 +100,7 @@ async function main() {
     where: { url: "https://example.com/video/team-day-out" },
     update: {},
     create: {
+      videoId: Math.random().toString(36).substring(2, 12),
       title: "Team Day Out: Building Together",
       description: "A glimpse into our recent team-building event.",
       url: "https://example.com/video/team-day-out",
