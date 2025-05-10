@@ -35,9 +35,14 @@ export type VideoEntry = {
   title: string;
   url: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; // Match your VideoStatus enum
-  category: {
-    name: string;
-  };
+  categories: Array<{
+    // This represents an entry from the CategoriesOnVideos join table
+    category: {
+      id: number;
+      name: string;
+    };
+    // You can also include other fields from CategoriesOnVideos if needed, like assignedAt
+  }>;
   // Add any other fields you might display or use for actions
   createdAt: Date;
 };
@@ -77,8 +82,18 @@ export const columns: ColumnDef<VideoEntry>[] = [
     },
   },
   {
-    accessorKey: "category.name", // Access nested data
-    header: "Category",
+    accessorKey: "categories", // Changed from category.name
+    header: "Categories", // Changed header to plural
+    cell: ({ row }) => {
+      const categoriesOnVideo = row.original.categories;
+      if (!categoriesOnVideo || categoriesOnVideo.length === 0) {
+        return <span className="text-xs text-muted-foreground">N/A</span>;
+      }
+      const categoryNames = categoriesOnVideo
+        .map((cov) => cov.category.name)
+        .join(", ");
+      return <span className="text-xs">{categoryNames}</span>;
+    },
   },
   {
     accessorKey: "status",

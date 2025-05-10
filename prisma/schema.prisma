@@ -15,30 +15,39 @@ datasource db {
 }
 
 model Category {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
+  id          Int                  @id @default(autoincrement())
+  name        String               @unique
   description String?
-  videos      Video[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  videos      CategoriesOnVideos[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 }
 
 model Video {
-  id           Int           @id @default(autoincrement())
+  id           Int                  @id @default(autoincrement())
   platform     VideoPlatform
-  videoId      String        @unique // YouTube video ID, platform-specific ID
+  videoId      String               @unique // YouTube video ID, platform-specific ID
   title        String
   description  String?
   url          String? // Made optional, can be derived or from API
   thumbnailUrl String?
   transcript   String? // Added field for video transcript
-  status       VideoStatus   @default(DRAFT)
-  categoryId   Int
-  category     Category      @relation(fields: [categoryId], references: [id])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  status       VideoStatus          @default(DRAFT)
+  categories   CategoriesOnVideos[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
 
-  @@index([categoryId])
+// New join table for Videos and Categories
+model CategoriesOnVideos {
+  video      Video    @relation(fields: [videoId], references: [id])
+  videoId    Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+  assignedAt DateTime @default(now())
+  assignedBy String? // Example: "user_id" or "system"
+
+  @@id([videoId, categoryId])
 }
 
 enum VideoStatus {

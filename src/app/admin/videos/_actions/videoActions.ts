@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
-import { VideoStatus, VideoPlatform } from "@generated/prisma";
+import { VideoStatus, VideoPlatform, Prisma } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function addVideo(formData: VideoFormData) {
@@ -27,8 +27,13 @@ export async function addVideo(formData: VideoFormData) {
         description: data.description as string | null,
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
-        categoryId: data.categoryId as number,
         status: data.status as VideoStatus,
+        categories: {
+          create: data.categoryIds.map((catId) => ({
+            category: { connect: { id: catId } },
+            assignedBy: "user-form",
+          })),
+        },
       },
     });
 
@@ -102,18 +107,39 @@ export async function updateVideo(id: number, formData: VideoFormData) {
   const data = result.data;
 
   try {
-    await prisma.video.update({
-      where: { id },
-      data: {
+    // Use a transaction to ensure atomicity of operations
+    await prisma.$transaction(async (tx) => {
+      // 1. Disconnect all existing categories for this video
+      await tx.categoriesOnVideos.deleteMany({
+        where: { videoId: id },
+      });
+
+      // 2. Prepare the video update data, excluding categories for now
+      const videoUpdateData: Prisma.VideoUpdateInput = {
         platform: data.platform as VideoPlatform,
         videoId: data.videoId as string,
         title: data.title as string,
         description: data.description as string | null,
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
-        categoryId: data.categoryId as number,
         status: data.status as VideoStatus,
-      },
+      };
+
+      // 3. If new categoryIds are provided, add them to the update data
+      if (data.categoryIds && data.categoryIds.length > 0) {
+        videoUpdateData.categories = {
+          create: data.categoryIds.map((catId) => ({
+            category: { connect: { id: catId } },
+            assignedBy: "user-form-update", // Or a more specific identifier
+          })),
+        };
+      }
+
+      // 4. Update the video with new data and new category connections
+      await tx.video.update({
+        where: { id },
+        data: videoUpdateData,
+      });
     });
 
     revalidatePath("/admin/videos");

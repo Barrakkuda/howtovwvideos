@@ -21,6 +21,13 @@ export default async function EditVideoPage({ params }: EditVideoPageProps) {
 
   const video = await prisma.video.findUnique({
     where: { id },
+    include: {
+      categories: {
+        include: {
+          category: true,
+        },
+      },
+    },
   });
 
   if (!video) {

@@ -65,7 +65,11 @@ async function main() {
       url: `https://www.youtube.com/watch?v=${videoId1}`,
       thumbnailUrl: `https://i.ytimg.com/vi/${videoId1}/hqdefault.jpg`,
       status: VideoStatus.PUBLISHED,
-      categoryId: category1.id,
+      categories: {
+        create: [
+          { category: { connect: { id: category1.id } }, assignedBy: "seed" },
+        ],
+      },
     },
   });
 
@@ -82,7 +86,11 @@ async function main() {
       url: `https://www.youtube.com/watch?v=${videoId2}`,
       thumbnailUrl: `https://i.ytimg.com/vi/${videoId2}/hqdefault.jpg`,
       status: VideoStatus.PUBLISHED,
-      categoryId: category1.id,
+      categories: {
+        create: [
+          { category: { connect: { id: category1.id } }, assignedBy: "seed" },
+        ],
+      },
     },
   });
 
@@ -98,7 +106,11 @@ async function main() {
       url: `https://www.youtube.com/watch?v=${videoId3}`,
       thumbnailUrl: `https://i.ytimg.com/vi/${videoId3}/hqdefault.jpg`,
       status: VideoStatus.DRAFT,
-      categoryId: category2.id,
+      categories: {
+        create: [
+          { category: { connect: { id: category2.id } }, assignedBy: "seed" },
+        ],
+      },
     },
   });
 
@@ -114,7 +126,11 @@ async function main() {
       url: `https://www.youtube.com/watch?v=${videoId4}`,
       thumbnailUrl: `https://i.ytimg.com/vi/${videoId4}/hqdefault.jpg`,
       status: VideoStatus.PUBLISHED,
-      categoryId: category3.id,
+      categories: {
+        create: [
+          { category: { connect: { id: category3.id } }, assignedBy: "seed" },
+        ],
+      },
     },
   });
 

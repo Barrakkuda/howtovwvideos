@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { VideoPlatform, VideoStatus } from "@generated/prisma";
+import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 // Import service functions
@@ -29,21 +29,31 @@ export interface ImportVideoResponse {
   videoId?: string;
 }
 
+// Define the payload structure for the import action
+export interface ImportYouTubeVideoPayload {
+  videoData: YouTubeVideoItem;
+  categoryId?: number; // For single, existing category selection
+  categories?: string[]; // Changed from suggestedCategoryNames
+}
+
 // Action to import a video into the database
 export async function importYouTubeVideo(
-  videoData: YouTubeVideoItem,
-  categoryId: number,
+  payload: ImportYouTubeVideoPayload,
 ): Promise<ImportVideoResponse> {
+  const { videoData, categoryId, categories } = payload;
+
   if (!videoData || !videoData.id) {
     return { success: false, message: "Invalid video data provided." };
   }
-  if (!categoryId) {
-    return { success: false, message: "Category ID is required." };
+
+  // Validate that either categoryId or categories are provided
+  if (!categoryId && (!categories || categories.length === 0)) {
+    return { success: false, message: "No category information provided." };
   }
 
   let transcriptText: string | null = null;
   try {
-    const transcriptResponse = await getTranscriptService(videoData.id); // Use service
+    const transcriptResponse = await getTranscriptService(videoData.id);
     if (transcriptResponse.success && transcriptResponse.transcript) {
       transcriptText = transcriptResponse.transcript;
     } else {
@@ -71,26 +81,110 @@ export async function importYouTubeVideo(
       };
     }
 
-    const newVideo = await prisma.video.create({
-      data: {
-        platform: VideoPlatform.YOUTUBE,
-        videoId: videoData.id,
-        title: videoData.title,
-        description: videoData.description || "",
-        url: `https://www.youtube.com/watch?v=${videoData.id}`,
-        thumbnailUrl: videoData.thumbnailUrl,
-        transcript: transcriptText,
-        status: VideoStatus.DRAFT,
-        categoryId: categoryId,
+    const categoryIdsToLink: number[] = [];
+
+    if (categoryId) {
+      // Ensure the single categoryId exists (optional check, Prisma connect will fail if not)
+      const catExists = await prisma.category.findUnique({
+        where: { id: categoryId },
+      });
+      if (!catExists) {
+        return {
+          success: false,
+          message: `Category with ID ${categoryId} not found.`,
+        };
+      }
+      categoryIdsToLink.push(categoryId);
+    } else if (categories && categories.length > 0) {
+      for (const name of categories) {
+        if (!name.trim()) continue; // Skip empty names
+
+        let category = await prisma.category.findFirst({
+          where: { name: { equals: name.trim(), mode: "insensitive" } },
+        });
+
+        if (!category) {
+          try {
+            category = await prisma.category.create({
+              data: { name: name.trim() },
+            });
+            console.log(
+              `Created new category: "${category.name}" with ID ${category.id}`,
+            );
+          } catch (createError: unknown) {
+            // Handle potential unique constraint violation if another process created it in the meantime
+            if (
+              createError instanceof Prisma.PrismaClientKnownRequestError &&
+              createError.code === "P2002" &&
+              (createError.meta?.target as string[])?.includes("name")
+            ) {
+              console.warn(
+                `Category "${name.trim()}" likely created by another process, fetching it.`,
+              );
+              category = await prisma.category.findFirst({
+                where: { name: { equals: name.trim(), mode: "insensitive" } },
+              });
+              if (!category) {
+                return {
+                  success: false,
+                  message: `Failed to create or find category "${name.trim()}" after race condition.`,
+                };
+              }
+            } else {
+              console.error(
+                `Failed to create category "${name.trim()}":`,
+                createError,
+              );
+              const errorMessage =
+                createError instanceof Error
+                  ? createError.message
+                  : "Unknown error during category creation";
+              return {
+                success: false,
+                message: `Failed to create category "${name.trim()}". Error: ${errorMessage}`,
+              };
+            }
+          }
+        }
+        if (category && !categoryIdsToLink.includes(category.id)) {
+          // Ensure no duplicates if names are similar casing
+          categoryIdsToLink.push(category.id);
+        }
+      }
+    }
+
+    if (categoryIdsToLink.length === 0) {
+      return {
+        success: false,
+        message: "No valid categories could be assigned to the video.",
+      };
+    }
+
+    const videoCreateData: Prisma.VideoCreateInput = {
+      platform: VideoPlatform.YOUTUBE,
+      videoId: videoData.id,
+      title: videoData.title,
+      description: videoData.description || "",
+      url: `https://www.youtube.com/watch?v=${videoData.id}`,
+      thumbnailUrl: videoData.thumbnailUrl,
+      transcript: transcriptText,
+      status: VideoStatus.DRAFT,
+      categories: {
+        create: categoryIdsToLink.map((catId) => ({
+          category: { connect: { id: catId } },
+          assignedBy: "system-youtube-import",
+        })),
       },
-    });
+    };
+
+    const newVideo = await prisma.video.create({ data: videoCreateData });
 
     revalidatePath("/admin/videos");
     revalidatePath("/admin/dashboard");
 
     return {
       success: true,
-      message: `Video "${newVideo.title}" imported successfully!`,
+      message: `Video "${newVideo.title}" imported successfully with ${categoryIdsToLink.length} categor${categoryIdsToLink.length === 1 ? "y" : "ies"}!`,
       videoId: newVideo.videoId,
     };
   } catch (error) {

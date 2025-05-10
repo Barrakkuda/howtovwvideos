@@ -26,6 +26,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 // import { Checkbox } from "@/components/ui/checkbox"; // If using checkbox for status
 import { useRouter } from "next/navigation";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronsUpDown } from "lucide-react"; // For the trigger button
 
 interface VideoFormProps {
   categories: Category[];
@@ -44,16 +53,21 @@ export default function VideoForm({
 
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
-    defaultValues: initialData || {
-      platform: VideoPlatform.YOUTUBE, // Default to YOUTUBE for new videos
-      videoId: "",
-      title: "",
-      description: "",
-      url: "",
-      thumbnailUrl: "",
-      categoryId: undefined, // Or 0 if your placeholder requires it
-      status: VideoStatus.DRAFT, // Default status
-    },
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          categoryIds: initialData.categoryIds || [], // Ensure categoryIds is an array
+        }
+      : {
+          platform: VideoPlatform.YOUTUBE,
+          videoId: "",
+          title: "",
+          description: "",
+          url: "",
+          thumbnailUrl: "",
+          categoryIds: [], // Initialize with an empty array for new videos
+          status: VideoStatus.DRAFT,
+        },
   });
 
   async function handleSubmit(data: VideoFormData) {
@@ -184,32 +198,65 @@ export default function VideoForm({
 
         <FormField
           control={form.control}
-          name="categoryId"
+          name="categoryIds" // Changed name to categoryIds
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Category</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
+              <FormLabel>Categories</FormLabel>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      {field.value && field.value.length > 0
+                        ? field.value.length === 1
+                          ? categories.find((cat) => cat.id === field.value[0])
+                              ?.name || "1 selected"
+                          : `${field.value.length} categories selected`
+                        : "Select categories"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                  <DropdownMenuLabel>Available Categories</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
                   {categories.map((category) => (
-                    <SelectItem
+                    <DropdownMenuCheckboxItem
                       key={category.id}
-                      value={category.id.toString()}
+                      checked={field.value?.includes(category.id)}
+                      onCheckedChange={(checked) => {
+                        const currentCategoryIds = field.value || [];
+                        if (checked) {
+                          field.onChange([...currentCategoryIds, category.id]);
+                        } else {
+                          field.onChange(
+                            currentCategoryIds.filter(
+                              (id) => id !== category.id,
+                            ),
+                          );
+                        }
+                      }}
                     >
                       {category.name}
-                    </SelectItem>
+                    </DropdownMenuCheckboxItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Display selected category names */}
+              {field.value && field.value.length > 0 && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  <strong>Selected:</strong>{" "}
+                  {field.value
+                    .map((id) => categories.find((cat) => cat.id === id)?.name)
+                    .filter(Boolean) // Remove any undefined if a selected ID somehow doesn't match
+                    .join(", ")}
+                </div>
+              )}
               <FormDescription>
-                Choose the category this video belongs to.
+                Choose one or more categories for this video.
               </FormDescription>
               <FormMessage />
             </FormItem>

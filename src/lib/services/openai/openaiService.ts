@@ -2,7 +2,7 @@ import OpenAI from "openai";
 
 export interface OpenAIAnalysisResponse {
   isHowToVWVideo: boolean;
-  category?: string;
+  categories?: string[];
 }
 
 const openai = new OpenAI({

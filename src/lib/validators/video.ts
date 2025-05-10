@@ -16,10 +16,9 @@ export const videoSchema = z.object({
     .url({ message: "Invalid URL format" })
     .optional()
     .or(z.literal("")), // Allow empty string to clear
-  categoryId: z.coerce
-    .number()
-    .int()
-    .positive({ message: "Please select a category" }),
+  categoryIds: z
+    .array(z.coerce.number().int().positive())
+    .min(1, { message: "Please select at least one category" }),
   status: z.nativeEnum(VideoStatus).optional(),
 });
 
@@ -33,7 +32,7 @@ export interface VideoFormData {
   description?: string;
   url?: string;
   thumbnailUrl?: string;
-  categoryId: number;
+  categoryIds: number[];
   status?: VideoStatus;
   transcript?: string | null; // Added for displaying in form
 }

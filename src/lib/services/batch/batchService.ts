@@ -85,7 +85,14 @@ export async function batchImportVideos(
               thumbnailUrl: video.thumbnailUrl,
               transcript: transcriptText,
               status: VideoStatus.DRAFT,
-              categoryId: categoryId,
+              categories: {
+                create: [
+                  {
+                    category: { connect: { id: categoryId } },
+                    assignedBy: "batch-import",
+                  },
+                ],
+              },
             },
           });
 

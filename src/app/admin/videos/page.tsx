@@ -7,7 +7,11 @@ import { Button as ShadcnButton } from "@/components/ui/button";
 export default async function AdminVideosPage() {
   const videosFromDb = await prisma.video.findMany({
     include: {
-      category: true,
+      categories: {
+        include: {
+          category: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",

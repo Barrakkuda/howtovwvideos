@@ -3,14 +3,30 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Category, Video, VideoPlatform } from "@generated/prisma"; // Assuming Video type includes all necessary fields
+import { Category, VideoPlatform, Prisma } from "@generated/prisma";
 
 import VideoForm from "@/components/admin/VideoForm";
 import { updateVideo } from "@/app/admin/videos/_actions/videoActions";
 import { VideoFormData } from "@/lib/validators/video";
 
+// Define a more specific type for the video prop, including its relations
+type CategoriesOnVideosWithCategory = Prisma.CategoriesOnVideosGetPayload<{
+  include: { category: true };
+}>;
+
+// Define a more specific type for the video prop, including its relations
+type VideoWithCategories = Prisma.VideoGetPayload<{
+  include: {
+    categories: {
+      include: {
+        category: true;
+      };
+    };
+  };
+}>;
+
 interface EditVideoFormWrapperProps {
-  video: Video; // Prisma Video type
+  video: VideoWithCategories; // Use the more specific type
   categories: Category[];
 }
 
@@ -30,7 +46,9 @@ export default function EditVideoFormWrapper({
     description: video.description || "", // Ensure description is not null for the form if schema expects string
     url: video.url || "",
     thumbnailUrl: video.thumbnailUrl || "", // Ensure thumbnailUrl is not null for the form if schema expects string
-    categoryId: video.categoryId,
+    categoryIds: video.categories.map(
+      (cov: CategoriesOnVideosWithCategory) => cov.categoryId,
+    ),
     status: video.status,
     platform: video.platform, // Add platform here
     transcript: video.transcript, // Add transcript here
