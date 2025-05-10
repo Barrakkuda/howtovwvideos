@@ -1,8 +1,8 @@
 export default function AdminNavbar() {
   return (
-    <header className="bg-card shadow-md px-10 py-4">
+    <header className="bg-sidebar shadow-md px-10 py-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold text-card-foreground">
+        <h1 className="text-xl font-semibold text-sidebar-foreground">
           Admin Panel
         </h1>
         {/* Add user menu, notifications, etc. here */}

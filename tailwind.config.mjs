@@ -20,8 +20,8 @@ const config = {
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: "oklch(0.141 0 0)",
+        foreground: "oklch(0.985 0 0)",
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
@@ -43,17 +43,21 @@ const config = {
           foreground: "var(--accent-foreground)",
         },
         popover: {
-          DEFAULT: "var(--popover)",
-          foreground: "var(--popover-foreground)",
+          DEFAULT: "oklch(0.21 0 0)",
+          foreground: "oklch(0.985 0 0)",
         },
         card: {
-          DEFAULT: "var(--card)",
-          foreground: "var(--card-foreground)",
+          DEFAULT: "oklch(0.21 0 0)",
+          foreground: "oklch(0.985 0 0)",
         },
         sidebar: {
-          DEFAULT: "var(--sidebar)",
-          foreground: "var(--sidebar-foreground)",
-          accent: "var(--sidebar-accent)",
+          DEFAULT: "oklch(0.18 0 0)",
+          foreground: "oklch(0.985 0 0)",
+          accent: "oklch(0.274 0 0)",
+        },
+        navbar: {
+          DEFAULT: "oklch(0.138 0 0)",
+          foreground: "oklch(0.985 0 0)",
         },
       },
       borderRadius: {
