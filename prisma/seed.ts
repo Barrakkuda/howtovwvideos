@@ -1,4 +1,4 @@
-import { PrismaClient, VideoStatus } from "../generated/prisma"; // Adjust path if your client is elsewhere
+import { PrismaClient, VideoStatus, VideoPlatform } from "../generated/prisma"; // Adjust path if your client is elsewhere
 // If your Prisma client is in node_modules/.prisma/client, the import would be:
 // import { PrismaClient, VideoStatus } from '@prisma/client';
 
@@ -53,58 +53,66 @@ async function main() {
   );
 
   // Create Videos
+  const videoId1 = Math.random().toString(36).substring(2, 12);
   const video1 = await prisma.video.upsert({
-    where: { url: "https://example.com/video/nextjs-basics" },
+    where: { videoId: videoId1 },
     update: {},
     create: {
-      videoId: Math.random().toString(36).substring(2, 12),
+      platform: VideoPlatform.YOUTUBE,
+      videoId: videoId1,
       title: "Next.js 101: The Basics",
       description: "A beginner-friendly introduction to Next.js.",
-      url: "https://example.com/video/nextjs-basics",
-      thumbnailUrl: "https://example.com/thumb/nextjs-basics.jpg",
+      url: `https://www.youtube.com/watch?v=${videoId1}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId1}/hqdefault.jpg`,
       status: VideoStatus.PUBLISHED,
       categoryId: category1.id,
     },
   });
 
+  const videoId2 = Math.random().toString(36).substring(2, 12);
   const video2 = await prisma.video.upsert({
-    where: { url: "https://example.com/video/prisma-setup" },
+    where: { videoId: videoId2 },
     update: {},
     create: {
-      videoId: Math.random().toString(36).substring(2, 12),
+      platform: VideoPlatform.YOUTUBE,
+      videoId: videoId2,
       title: "Setting up Prisma with PostgreSQL",
       description:
         "Learn how to quickly set up Prisma ORM with a PostgreSQL database.",
-      url: "https://example.com/video/prisma-setup",
-      thumbnailUrl: "https://example.com/thumb/prisma-setup.jpg",
+      url: `https://www.youtube.com/watch?v=${videoId2}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId2}/hqdefault.jpg`,
       status: VideoStatus.PUBLISHED,
       categoryId: category1.id,
     },
   });
 
+  const videoId3 = Math.random().toString(36).substring(2, 12);
   const video3 = await prisma.video.upsert({
-    where: { url: "https://example.com/video/our-new-feature-X" },
+    where: { videoId: videoId3 },
     update: {},
     create: {
-      videoId: Math.random().toString(36).substring(2, 12),
+      platform: VideoPlatform.YOUTUBE,
+      videoId: videoId3,
       title: "Introducing Feature X!",
       description: "Check out our latest and greatest Feature X in action.",
-      url: "https://example.com/video/our-new-feature-X",
-      thumbnailUrl: "https://example.com/thumb/feature-x.jpg",
+      url: `https://www.youtube.com/watch?v=${videoId3}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId3}/hqdefault.jpg`,
       status: VideoStatus.DRAFT,
       categoryId: category2.id,
     },
   });
 
+  const videoId4 = Math.random().toString(36).substring(2, 12);
   const video4 = await prisma.video.upsert({
-    where: { url: "https://example.com/video/team-day-out" },
+    where: { videoId: videoId4 },
     update: {},
     create: {
-      videoId: Math.random().toString(36).substring(2, 12),
+      platform: VideoPlatform.YOUTUBE,
+      videoId: videoId4,
       title: "Team Day Out: Building Together",
       description: "A glimpse into our recent team-building event.",
-      url: "https://example.com/video/team-day-out",
-      thumbnailUrl: "https://example.com/thumb/team-day.jpg",
+      url: `https://www.youtube.com/watch?v=${videoId4}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId4}/hqdefault.jpg`,
       status: VideoStatus.PUBLISHED,
       categoryId: category3.id,
     },

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Category, VideoStatus } from "@generated/prisma"; // Assuming Prisma client is in node_modules
+import { Category, VideoStatus, VideoPlatform } from "@generated/prisma"; // Assuming Prisma client is in node_modules
 import { useForm } from "react-hook-form";
 
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
@@ -45,6 +45,7 @@ export default function VideoForm({
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
     defaultValues: initialData || {
+      platform: VideoPlatform.YOUTUBE, // Default to YOUTUBE for new videos
       videoId: "",
       title: "",
       description: "",
@@ -62,6 +63,35 @@ export default function VideoForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="platform"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Platform</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a video platform" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.values(VideoPlatform).map((platformValue) => (
+                    <SelectItem key={platformValue} value={platformValue}>
+                      {platformValue.charAt(0).toUpperCase() +
+                        platformValue.slice(1).toLowerCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                The platform where the video is hosted (e.g., YouTube, Vimeo).
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="videoId"
@@ -99,7 +129,7 @@ export default function VideoForm({
           name="url"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Video URL</FormLabel>
+              <FormLabel>Video URL (Optional)</FormLabel>
               <FormControl>
                 <Input
                   placeholder="https://www.youtube.com/watch?v=..."
@@ -107,8 +137,7 @@ export default function VideoForm({
                 />
               </FormControl>
               <FormDescription>
-                The direct URL to the video (e.g., YouTube, Vimeo, or
-                self-hosted).
+                The direct URL to the video. Can be auto-generated if empty.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -125,7 +154,7 @@ export default function VideoForm({
                 <Input placeholder="https://example.com/image.jpg" {...field} />
               </FormControl>
               <FormDescription>
-                URL of the video thumbnail image. Leave blank to skip.
+                URL of the video thumbnail image. Can be auto-generated.
               </FormDescription>
               <FormMessage />
             </FormItem>

@@ -33,7 +33,7 @@ export type VideoEntry = {
   id: number; // Or string, depending on your Prisma schema for Video.id
   videoId: string | null;
   title: string;
-  url: string;
+  url: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; // Match your VideoStatus enum
   category: {
     name: string;
@@ -171,7 +171,7 @@ export const columns: ColumnDef<VideoEntry>[] = [
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <Link href={`/admin/videos/edit/${video.id}`} passHref>
+              <Link href={`/admin/videos/${video.id}/edit`} passHref>
                 <DropdownMenuItem>Edit</DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />

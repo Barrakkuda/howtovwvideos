@@ -24,17 +24,18 @@ model Category {
 }
 
 model Video {
-  id           Int         @id @default(autoincrement())
-  videoId      String      @unique // YouTube video ID
+  id           Int           @id @default(autoincrement())
+  platform     VideoPlatform
+  videoId      String        @unique // YouTube video ID, platform-specific ID
   title        String
   description  String?
-  url          String      @unique // URL to the video file or platform
+  url          String? // Made optional, can be derived or from API
   thumbnailUrl String?
-  status       VideoStatus @default(DRAFT)
+  status       VideoStatus   @default(DRAFT)
   categoryId   Int
-  category     Category    @relation(fields: [categoryId], references: [id])
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  category     Category      @relation(fields: [categoryId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([categoryId])
 }
@@ -43,4 +44,10 @@ enum VideoStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+// Define VideoPlatform enum
+enum VideoPlatform {
+  YOUTUBE
+  VIMEO
 }

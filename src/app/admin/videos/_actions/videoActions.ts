@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
-import { VideoStatus } from "@generated/prisma";
+import { VideoStatus, VideoPlatform } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function addVideo(formData: VideoFormData) {
@@ -21,10 +21,11 @@ export async function addVideo(formData: VideoFormData) {
   try {
     await prisma.video.create({
       data: {
+        platform: data.platform as VideoPlatform,
         videoId: data.videoId as string,
         title: data.title as string,
         description: data.description as string | null,
-        url: data.url as string,
+        url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
         categoryId: data.categoryId as number,
         status: data.status as VideoStatus,
@@ -83,6 +84,73 @@ export async function deleteVideo(id: number) {
       success: false,
       message:
         "Failed to delete video. It might have already been deleted or an error occurred.",
+    };
+  }
+}
+
+export async function updateVideo(id: number, formData: VideoFormData) {
+  const result = videoSchema.safeParse(formData);
+
+  if (!result.success) {
+    return {
+      success: false,
+      message: "Invalid data provided.",
+      errors: result.error.flatten().fieldErrors,
+    };
+  }
+
+  const data = result.data;
+
+  try {
+    await prisma.video.update({
+      where: { id },
+      data: {
+        platform: data.platform as VideoPlatform,
+        videoId: data.videoId as string,
+        title: data.title as string,
+        description: data.description as string | null,
+        url: data.url as string | null,
+        thumbnailUrl: data.thumbnailUrl as string | null,
+        categoryId: data.categoryId as number,
+        status: data.status as VideoStatus,
+      },
+    });
+
+    revalidatePath("/admin/videos");
+    revalidatePath(`/admin/videos/edit/${id}`); // Revalidate the edit page itself
+    return {
+      success: true,
+      message: "Video updated successfully!",
+    };
+  } catch (error) {
+    console.error(`Failed to update video with id ${id}:`, error);
+    let errorMessage = "Failed to update video due to an unexpected error.";
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const prismaError = error as {
+        code: string;
+        meta?: { target?: string[] };
+      };
+      if (prismaError.code === "P2002") {
+        // Unique constraint violation
+        const target = prismaError.meta?.target;
+        if (target && target.includes("videoId")) {
+          errorMessage = "A video with this Video ID already exists.";
+        }
+        if (target && target.includes("url")) {
+          errorMessage = "A video with this URL already exists.";
+        }
+      } else if (prismaError.code === "P2025") {
+        // Record to update not found
+        errorMessage = "Video not found. It may have been deleted.";
+      } else if ("message" in error && typeof error.message === "string") {
+        errorMessage = error.message;
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return {
+      success: false,
+      message: errorMessage,
     };
   }
 }
