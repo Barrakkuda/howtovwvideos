@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, SearchIcon, CheckCircle } from "lucide-react";
+import { Loader2, SearchIcon, CheckCircle, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Category } from "@generated/prisma";
 
@@ -19,8 +19,10 @@ import {
   searchYouTubeVideos,
   importYouTubeVideo,
   getYouTubeTranscript,
+  analyzeTranscriptWithOpenAI,
   YouTubeVideoItem,
   ImportVideoResponse,
+  OpenAIAnalysisResponse,
 } from "@/app/admin/youtube-import/_actions/youtubeActions";
 
 interface YouTubeImportFormProps {
@@ -42,6 +44,19 @@ export default function YouTubeImportForm({
   >;
   const [displayedTranscripts, setDisplayedTranscripts] =
     useState<DisplayedTranscriptStatus>({});
+
+  // State for OpenAI analysis: videoId -> { fetching: boolean, analysis: OpenAIAnalysisResponse | null, error: string | null }
+  type OpenAIAnalysisStatus = Record<
+    string,
+    {
+      fetching: boolean;
+      analysis: OpenAIAnalysisResponse | null;
+      error: string | null;
+    }
+  >;
+  const [openaiAnalysis, setOpenaiAnalysis] = useState<OpenAIAnalysisStatus>(
+    {},
+  );
 
   // State for import status: videoId -> { importing: boolean, imported: boolean, success?: boolean, message?: string }
   type ImportStatus = Record<
@@ -70,6 +85,7 @@ export default function YouTubeImportForm({
     setImportStatus({}); // Clear import statuses
     setSelectedCategories({}); // Clear selected categories
     setDisplayedTranscripts({}); // Clear displayed transcripts
+    setOpenaiAnalysis({}); // Clear OpenAI analysis results
 
     try {
       const searchResults = await searchYouTubeVideos(searchQuery);
@@ -219,6 +235,65 @@ export default function YouTubeImportForm({
     }
   };
 
+  const handleOpenAIAnalysis = async (videoId: string) => {
+    const transcriptData = displayedTranscripts[videoId];
+    if (!transcriptData?.transcript) {
+      toast.error("Please fetch the transcript first.");
+      return;
+    }
+
+    setOpenaiAnalysis((prev) => ({
+      ...prev,
+      [videoId]: { fetching: true, analysis: null, error: null },
+    }));
+
+    try {
+      const result = await analyzeTranscriptWithOpenAI(
+        transcriptData.transcript,
+      );
+      if (result.success) {
+        setOpenaiAnalysis((prev) => ({
+          ...prev,
+          [videoId]: {
+            fetching: false,
+            analysis: result.data ?? null,
+            error: result.data
+              ? null
+              : result.error || "Analysis data not available.",
+          },
+        }));
+        if (result.data) {
+          toast.success("Transcript analyzed successfully by OpenAI.");
+        } else if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.info("OpenAI analysis did not return data.");
+        }
+      } else {
+        setOpenaiAnalysis((prev) => ({
+          ...prev,
+          [videoId]: {
+            fetching: false,
+            analysis: null,
+            error: result.error || "Failed to analyze transcript with OpenAI.",
+          },
+        }));
+        toast.error(
+          result.error || "Failed to analyze transcript with OpenAI.",
+        );
+      }
+    } catch (err) {
+      console.error("OpenAI analysis failed:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred.";
+      setOpenaiAnalysis((prev) => ({
+        ...prev,
+        [videoId]: { fetching: false, analysis: null, error: errorMessage },
+      }));
+      toast.error(`OpenAI Error: ${errorMessage}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -252,6 +327,7 @@ export default function YouTubeImportForm({
                 imported: false,
               };
               const transcriptStatus = displayedTranscripts[video.id];
+              const analysisStatus = openaiAnalysis[video.id];
 
               return (
                 <li
@@ -272,7 +348,7 @@ export default function YouTubeImportForm({
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {video.description || "No description."}
                     </p>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       <Select
                         onValueChange={(value) =>
                           handleCategoryChange(video.id, value)
@@ -334,6 +410,29 @@ export default function YouTubeImportForm({
                         ) : null}
                         Get Transcript
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenAIAnalysis(video.id)}
+                        disabled={
+                          !transcriptStatus?.transcript ||
+                          analysisStatus?.fetching ||
+                          status.imported
+                        }
+                        className="w-full sm:w-auto"
+                        title={
+                          !transcriptStatus?.transcript
+                            ? "Fetch transcript first"
+                            : "Analyze with OpenAI"
+                        }
+                      >
+                        {analysisStatus?.fetching ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Wand2 className="mr-2 h-4 w-4" />
+                        )}
+                        Prompt OpenAI
+                      </Button>
                     </div>
                     {status.message && (
                       <p
@@ -363,6 +462,30 @@ export default function YouTubeImportForm({
                               {transcriptStatus.transcript}
                             </p>
                           </details>
+                        )}
+                      </div>
+                    )}
+                    {analysisStatus && (
+                      <div className="mt-2 text-xs">
+                        {analysisStatus.fetching && (
+                          <p className="text-muted-foreground">
+                            Analyzing with OpenAI...
+                          </p>
+                        )}
+                        {analysisStatus.error && (
+                          <p className="text-destructive">
+                            OpenAI Error: {analysisStatus.error}
+                          </p>
+                        )}
+                        {analysisStatus.analysis && (
+                          <div className="mt-1 p-2 bg-sky-100 dark:bg-sky-900/50 rounded">
+                            <h4 className="font-semibold text-sky-700 dark:text-sky-300">
+                              OpenAI Analysis:
+                            </h4>
+                            <pre className="text-xs text-sky-600 dark:text-sky-400 whitespace-pre-wrap">
+                              {JSON.stringify(analysisStatus.analysis, null, 2)}
+                            </pre>
+                          </div>
                         )}
                       </div>
                     )}
