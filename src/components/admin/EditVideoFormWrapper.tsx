@@ -33,6 +33,7 @@ export default function EditVideoFormWrapper({
     categoryId: video.categoryId,
     status: video.status,
     platform: video.platform, // Add platform here
+    transcript: video.transcript, // Add transcript here
     // Ensure all fields in VideoFormData are covered here if they exist in Video
   };
 

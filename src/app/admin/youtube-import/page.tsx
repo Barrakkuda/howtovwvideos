@@ -1,6 +1,5 @@
 import YouTubeImportForm from "@/components/admin/YouTubeImportForm";
 import { prisma } from "@/lib/db";
-import { Category } from "@generated/prisma";
 
 export const metadata = {
   title: "Import YouTube Videos",

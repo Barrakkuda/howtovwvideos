@@ -246,6 +246,31 @@ export default function VideoForm({
           )}
         />
 
+        {initialData?.transcript && (
+          <FormField
+            control={form.control}
+            name="transcript" // Name matches VideoFormData
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Transcript (Read-only)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Video transcript..."
+                    className="resize-y min-h-[100px] max-h-[300px] bg-muted/50"
+                    {...field}
+                    value={initialData.transcript || ""} // Ensure value is passed for read-only
+                    readOnly
+                  />
+                </FormControl>
+                <FormDescription>
+                  This is the transcript fetched for the video.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         {/* More fields will go here */}
 
         <div className="flex items-center justify-end gap-2">

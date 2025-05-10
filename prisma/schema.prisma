@@ -31,6 +31,7 @@ model Video {
   description  String?
   url          String? // Made optional, can be derived or from API
   thumbnailUrl String?
+  transcript   String? // Added field for video transcript
   status       VideoStatus   @default(DRAFT)
   categoryId   Int
   category     Category      @relation(fields: [categoryId], references: [id])

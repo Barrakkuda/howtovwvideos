@@ -23,4 +23,17 @@ export const videoSchema = z.object({
   status: z.nativeEnum(VideoStatus).optional(),
 });
 
-export type VideoFormData = z.infer<typeof videoSchema>;
+// export type VideoFormData = z.infer<typeof videoSchema>;
+
+// Manually define VideoFormData to include fields not in the schema for submission (like read-only transcript)
+export interface VideoFormData {
+  platform: VideoPlatform;
+  videoId: string;
+  title: string;
+  description?: string;
+  url?: string;
+  thumbnailUrl?: string;
+  categoryId: number;
+  status?: VideoStatus;
+  transcript?: string | null; // Added for displaying in form
+}

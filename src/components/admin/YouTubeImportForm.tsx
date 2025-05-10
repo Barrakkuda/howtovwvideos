@@ -18,6 +18,7 @@ import { Category } from "@generated/prisma";
 import {
   searchYouTubeVideos,
   importYouTubeVideo,
+  getYouTubeTranscript,
   YouTubeVideoItem,
   ImportVideoResponse,
 } from "@/app/admin/youtube-import/_actions/youtubeActions";
@@ -33,6 +34,14 @@ export default function YouTubeImportForm({
   const [results, setResults] = useState<YouTubeVideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // State for transcript display: videoId -> { fetching: boolean, transcript: string | null, error: string | null }
+  type DisplayedTranscriptStatus = Record<
+    string,
+    { fetching: boolean; transcript: string | null; error: string | null }
+  >;
+  const [displayedTranscripts, setDisplayedTranscripts] =
+    useState<DisplayedTranscriptStatus>({});
 
   // State for import status: videoId -> { importing: boolean, imported: boolean, success?: boolean, message?: string }
   type ImportStatus = Record<
@@ -60,6 +69,7 @@ export default function YouTubeImportForm({
     setResults([]); // Clear previous results
     setImportStatus({}); // Clear import statuses
     setSelectedCategories({}); // Clear selected categories
+    setDisplayedTranscripts({}); // Clear displayed transcripts
 
     try {
       const searchResults = await searchYouTubeVideos(searchQuery);
@@ -163,6 +173,52 @@ export default function YouTubeImportForm({
     }
   };
 
+  const handleFetchTranscript = async (videoId: string) => {
+    setDisplayedTranscripts((prev) => ({
+      ...prev,
+      [videoId]: { fetching: true, transcript: null, error: null },
+    }));
+    try {
+      const result = await getYouTubeTranscript(videoId);
+      if (result.success) {
+        setDisplayedTranscripts((prev) => ({
+          ...prev,
+          [videoId]: {
+            fetching: false,
+            transcript: result.transcript ?? null,
+            error: result.transcript
+              ? null
+              : result.error || "Transcript not available.",
+          },
+        }));
+        if (!result.transcript && result.error) {
+          toast.error(result.error);
+        } else if (!result.transcript) {
+          toast.info("Transcript not available for this video.");
+        }
+      } else {
+        setDisplayedTranscripts((prev) => ({
+          ...prev,
+          [videoId]: {
+            fetching: false,
+            transcript: null,
+            error: result.error || "Failed to fetch transcript.",
+          },
+        }));
+        toast.error(result.error || "Failed to fetch transcript.");
+      }
+    } catch (err) {
+      console.error("Fetch transcript failed:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred.";
+      setDisplayedTranscripts((prev) => ({
+        ...prev,
+        [videoId]: { fetching: false, transcript: null, error: errorMessage },
+      }));
+      toast.error(`Error: ${errorMessage}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -195,6 +251,8 @@ export default function YouTubeImportForm({
                 importing: false,
                 imported: false,
               };
+              const transcriptStatus = displayedTranscripts[video.id];
+
               return (
                 <li
                   key={video.id}
@@ -264,6 +322,18 @@ export default function YouTubeImportForm({
                             ? "Imported"
                             : "Import"}
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleFetchTranscript(video.id)}
+                        disabled={transcriptStatus?.fetching || status.imported}
+                        className="w-full sm:w-auto"
+                      >
+                        {transcriptStatus?.fetching ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        Get Transcript
+                      </Button>
                     </div>
                     {status.message && (
                       <p
@@ -271,6 +341,30 @@ export default function YouTubeImportForm({
                       >
                         {status.message}
                       </p>
+                    )}
+                    {transcriptStatus && (
+                      <div className="mt-2 text-xs">
+                        {transcriptStatus.fetching && (
+                          <p className="text-muted-foreground">
+                            Fetching transcript...
+                          </p>
+                        )}
+                        {transcriptStatus.error && (
+                          <p className="text-destructive">
+                            Error: {transcriptStatus.error}
+                          </p>
+                        )}
+                        {transcriptStatus.transcript && (
+                          <details>
+                            <summary className="cursor-pointer">
+                              View Transcript
+                            </summary>
+                            <p className="mt-1 p-2 bg-muted/50 rounded text-muted-foreground max-h-32 overflow-y-auto">
+                              {transcriptStatus.transcript}
+                            </p>
+                          </details>
+                        )}
+                      </div>
                     )}
                   </div>
                 </li>

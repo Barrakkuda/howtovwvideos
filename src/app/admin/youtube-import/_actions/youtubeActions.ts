@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { VideoPlatform, VideoStatus } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
+import { YoutubeTranscript } from "youtube-transcript";
 
 // Define the structure of a single video item from YouTube API results
 export interface YouTubeVideoItem {
@@ -152,6 +153,27 @@ export async function importYouTubeVideo(
     return { success: false, message: "Category ID is required." };
   }
 
+  let transcriptText: string | null = null;
+  try {
+    const transcriptResponse = await YoutubeTranscript.fetchTranscript(
+      videoData.id,
+    );
+    if (transcriptResponse && transcriptResponse.length > 0) {
+      const rawTranscript = transcriptResponse
+        .map((line) => line.text)
+        .join(" ");
+      transcriptText = decodeHtmlEntities(rawTranscript);
+    } else {
+      console.log(`No transcript found for video ID: ${videoData.id}`);
+    }
+  } catch (transcriptError) {
+    console.warn(
+      `Could not fetch transcript for video ID ${videoData.id}:`,
+      transcriptError,
+    );
+    // It's okay if transcript fetch fails, proceed without it
+  }
+
   try {
     const existingVideo = await prisma.video.findUnique({
       where: { videoId: videoData.id },
@@ -173,6 +195,7 @@ export async function importYouTubeVideo(
         description: videoData.description || "",
         url: `https://www.youtube.com/watch?v=${videoData.id}`,
         thumbnailUrl: videoData.thumbnailUrl,
+        transcript: transcriptText,
         status: VideoStatus.DRAFT, // Default status
         categoryId: categoryId,
         // publishedAt from YouTube is a string, Prisma expects DateTime.
@@ -201,5 +224,43 @@ export async function importYouTubeVideo(
       message: errorMessage,
       videoId: videoData.id,
     };
+  }
+}
+
+// Server action to specifically fetch a transcript
+export async function getYouTubeTranscript(
+  videoId: string,
+): Promise<{ success: boolean; transcript?: string; error?: string }> {
+  if (!videoId) {
+    return { success: false, error: "Video ID is required." };
+  }
+
+  try {
+    const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoId);
+    if (transcriptResponse && transcriptResponse.length > 0) {
+      const rawTranscriptText = transcriptResponse
+        .map((line) => line.text)
+        .join(" ");
+      const decodedTranscriptText = decodeHtmlEntities(rawTranscriptText);
+      return { success: true, transcript: decodedTranscriptText };
+    } else {
+      return { success: false, error: "No transcript found or it is empty." };
+    }
+  } catch (error) {
+    console.warn(`Could not fetch transcript for video ID ${videoId}:`, error);
+    let errorMessage = "Failed to fetch transcript.";
+    if (
+      error instanceof Error &&
+      error.message.includes("disabled transcripts")
+    ) {
+      errorMessage = "Transcripts are disabled for this video.";
+    } else if (
+      error instanceof Error &&
+      error.message.includes("no transcripts are available")
+    ) {
+      errorMessage = "No transcripts are available for this video.";
+    }
+
+    return { success: false, error: errorMessage };
   }
 }
