@@ -50,6 +50,11 @@ const config = {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
         },
+        sidebar: {
+          DEFAULT: "var(--sidebar)",
+          foreground: "var(--sidebar-foreground)",
+          accent: "var(--sidebar-accent)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

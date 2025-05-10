@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LayoutDashboard, Film, Tags } from "lucide-react";
 
 export default function AdminSidebar() {
   return (
@@ -9,25 +10,28 @@ export default function AdminSidebar() {
           <li>
             <Link
               href="/admin/dashboard"
-              className="block py-2 px-3 rounded hover:bg-sidebar-accent"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
             >
-              Dashboard
+              <LayoutDashboard className="h-5 w-5" />
+              <span>Dashboard</span>
             </Link>
           </li>
           <li>
             <Link
               href="/admin/videos"
-              className="block py-2 px-3 rounded hover:bg-sidebar-accent"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
             >
-              Videos
+              <Film className="h-5 w-5" />
+              <span>Videos</span>
             </Link>
           </li>
           <li>
             <Link
               href="/admin/categories"
-              className="block py-2 px-3 rounded hover:bg-sidebar-accent"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
             >
-              Categories
+              <Tags className="h-5 w-5" />
+              <span>Categories</span>
             </Link>
           </li>
           {/* Add more navigation links as needed */}
