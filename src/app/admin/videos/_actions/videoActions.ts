@@ -28,6 +28,7 @@ export async function addVideo(formData: VideoFormData) {
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
         status: data.status as VideoStatus,
+        tags: data.tags,
         categories: {
           create: data.categoryIds.map((catId) => ({
             category: { connect: { id: catId } },
@@ -123,6 +124,7 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
         status: data.status as VideoStatus,
+        tags: data.tags,
       };
 
       // 3. If new categoryIds are provided, add them to the update data

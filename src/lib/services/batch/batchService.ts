@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
+import { Prisma, VideoPlatform, VideoStatus, VWType } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 import {
   getYouTubeTranscript,
@@ -7,6 +7,16 @@ import {
 } from "../youtube/youtubeService";
 import { analyzeTranscriptWithOpenAI } from "../openai/openaiService";
 import { OpenAIAnalysisResponse } from "../openai/openaiService";
+
+// Helper function to map string to VWType enum value
+function mapStringToVWType(typeString: string): VWType | undefined {
+  const upperTypeString = typeString.toUpperCase();
+  if (upperTypeString in VWType) {
+    return VWType[upperTypeString as keyof typeof VWType];
+  }
+  console.warn(`Unknown VWType string from OpenAI (batch): ${typeString}`);
+  return undefined;
+}
 
 export interface BatchImportResult {
   videoId: string;
@@ -31,6 +41,14 @@ export async function batchImportVideos(
   const results: BatchImportResult[] = [];
 
   try {
+    // Fetch existing category names and VWType names once before the loop
+    const categoriesFromDb = await prisma.category.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    });
+    const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
+    const availableVWTypeNames = Object.values(VWType);
+
     // Search for videos
     const searchResponse = await searchYouTubeVideos(searchQuery, maxVideos);
     if (!searchResponse.success || !searchResponse.data) {
@@ -71,8 +89,11 @@ export async function batchImportVideos(
           transcriptText = transcriptResult.transcript;
 
           // Analyze with OpenAI if we have a transcript
-          const analysisResult =
-            await analyzeTranscriptWithOpenAI(transcriptText);
+          const analysisResult = await analyzeTranscriptWithOpenAI(
+            transcriptText,
+            existingCategoryNames,
+            availableVWTypeNames,
+          );
           if (analysisResult.success && analysisResult.data) {
             openAIAnalysis = analysisResult.data;
             isHowToVWVideoFromAnalysis = analysisResult.data.isHowToVWVideo;
@@ -202,6 +223,20 @@ export async function batchImportVideos(
                 assignedBy: categoriesSource,
               })),
             };
+          }
+
+          // Handle vwTypes and tags from OpenAI analysis
+          if (openAIAnalysis?.vwTypes && openAIAnalysis.vwTypes.length > 0) {
+            const mappedVwTypes = openAIAnalysis.vwTypes
+              .map(mapStringToVWType)
+              .filter((type): type is VWType => type !== undefined);
+            if (mappedVwTypes.length > 0) {
+              videoCreateData.vwTypes = mappedVwTypes;
+            }
+          }
+
+          if (openAIAnalysis?.tags && openAIAnalysis.tags.length > 0) {
+            videoCreateData.tags = openAIAnalysis.tags;
           }
         }
 

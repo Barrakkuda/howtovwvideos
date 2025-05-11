@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
+import { Prisma, VideoPlatform, VideoStatus, VWType } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 // Import service functions
@@ -37,6 +37,17 @@ export interface ImportYouTubeVideoPayload {
   isHowToVWVideo: boolean;
   sourceKeyword: string;
   channelTitle?: string;
+  openAIAnalysisData?: OpenAIAnalysisResponse; // To pass analysis results
+}
+
+// Helper function to map string to VWType enum value
+function mapStringToVWType(typeString: string): VWType | undefined {
+  const upperTypeString = typeString.toUpperCase();
+  if (upperTypeString in VWType) {
+    return VWType[upperTypeString as keyof typeof VWType];
+  }
+  console.warn(`Unknown VWType string from OpenAI: ${typeString}`);
+  return undefined;
 }
 
 // Action to import a video into the database
@@ -50,6 +61,7 @@ export async function importYouTubeVideo(
     isHowToVWVideo,
     sourceKeyword,
     channelTitle,
+    openAIAnalysisData,
   } = payload;
 
   if (!videoData || !videoData.id) {
@@ -186,6 +198,22 @@ export async function importYouTubeVideo(
       }
     }
 
+    // Handle vwTypes and tags from OpenAI analysis if available
+    if (openAIAnalysisData) {
+      if (openAIAnalysisData.vwTypes && openAIAnalysisData.vwTypes.length > 0) {
+        const mappedVwTypes = openAIAnalysisData.vwTypes
+          .map(mapStringToVWType) // Use the helper function
+          .filter((type): type is VWType => type !== undefined);
+        if (mappedVwTypes.length > 0) {
+          videoCreateData.vwTypes = mappedVwTypes;
+        }
+      }
+
+      if (openAIAnalysisData.tags && openAIAnalysisData.tags.length > 0) {
+        videoCreateData.tags = openAIAnalysisData.tags;
+      }
+    }
+
     const newVideo = await prisma.video.create({ data: videoCreateData });
 
     revalidatePath("/admin/videos");
@@ -267,5 +295,27 @@ export async function analyzeTranscriptWithOpenAI(transcript: string): Promise<{
   data?: OpenAIAnalysisResponse;
   error?: string;
 }> {
-  return analyzeTranscriptService(transcript);
+  try {
+    const categoriesFromDb = await prisma.category.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    });
+    const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
+
+    const availableVWTypeNames = Object.values(VWType);
+
+    // Call the actual service function with the new parameters
+    return analyzeTranscriptService(
+      transcript,
+      existingCategoryNames,
+      availableVWTypeNames,
+    );
+  } catch (error) {
+    console.error("Error preparing data for OpenAI analysis:", error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred while fetching data for OpenAI.";
+    return { success: false, error: errorMessage };
+  }
 }

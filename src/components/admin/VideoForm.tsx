@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Category, VideoStatus, VideoPlatform } from "@generated/prisma"; // Assuming Prisma client is in node_modules
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronsUpDown } from "lucide-react"; // For the trigger button
+import { XIcon } from "lucide-react";
 
 interface VideoFormProps {
   categories: Category[];
@@ -57,6 +59,7 @@ export default function VideoForm({
       ? {
           ...initialData,
           categoryIds: initialData.categoryIds || [], // Ensure categoryIds is an array
+          tags: initialData.tags || [], // Initialize tags
         }
       : {
           platform: VideoPlatform.YOUTUBE,
@@ -67,8 +70,32 @@ export default function VideoForm({
           thumbnailUrl: "",
           categoryIds: [], // Initialize with an empty array for new videos
           status: VideoStatus.DRAFT,
+          tags: [], // Initialize tags for new videos
         },
   });
+
+  // State for the current tag input value
+  const [currentTag, setCurrentTag] = useState("");
+  const { control, setValue, watch } = form;
+
+  const existingTags = watch("tags") || [];
+
+  const handleAddTag = () => {
+    if (currentTag.trim() && !existingTags.includes(currentTag.trim())) {
+      setValue("tags", [...existingTags, currentTag.trim()], {
+        shouldValidate: true,
+      });
+      setCurrentTag(""); // Clear input
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setValue(
+      "tags",
+      existingTags.filter((tag) => tag !== tagToRemove),
+      { shouldValidate: true },
+    );
+  };
 
   async function handleSubmit(data: VideoFormData) {
     await onSubmit(data);
@@ -263,6 +290,66 @@ export default function VideoForm({
           )}
         />
 
+        {/* Tags Field Start */}
+        <FormField
+          control={control}
+          name="tags"
+          render={() => (
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Add a tag and press Enter"
+                    value={currentTag}
+                    onChange={(e) => setCurrentTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddTag}
+                    disabled={!currentTag.trim()}
+                  >
+                    Add Tag
+                  </Button>
+                </div>
+              </FormControl>
+              {existingTags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {existingTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="flex items-center justify-center gap-1 pl-2 pr-1 py-1 text-xs bg-secondary text-secondary-foreground rounded-full"
+                    >
+                      {tag}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0.5 rounded-full hover:bg-destructive/80 hover:text-destructive-foreground"
+                        onClick={() => handleRemoveTag(tag)}
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </Button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <FormDescription>
+                Enter tags one by one. Press Enter or click Add Tag.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {/* Tags Field End */}
+
         <FormField
           control={form.control}
           name="status"
@@ -317,8 +404,6 @@ export default function VideoForm({
             )}
           />
         )}
-
-        {/* More fields will go here */}
 
         <div className="flex items-center justify-end gap-2">
           <Button

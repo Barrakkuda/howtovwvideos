@@ -37,6 +37,7 @@ model Video {
   isHowToVWVideo  Boolean              @default(false)
   categories      CategoriesOnVideos[]
   vwTypes         VWType[]
+  tags            String[]
   processingError String?
   sourceKeyword   String?
   processedAt     DateTime?

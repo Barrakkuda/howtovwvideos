@@ -20,6 +20,10 @@ export const videoSchema = z.object({
     .array(z.coerce.number().int().positive())
     .min(1, { message: "Please select at least one category" }),
   status: z.nativeEnum(VideoStatus).optional(),
+  tags: z
+    .array(z.string()) // Each tag itself is a string
+    .optional()
+    .default([]), // Default to an empty array if not provided
 });
 
 // export type VideoFormData = z.infer<typeof videoSchema>;
@@ -35,4 +39,5 @@ export interface VideoFormData {
   categoryIds: number[];
   status?: VideoStatus;
   transcript?: string | null; // Added for displaying in form
+  tags?: string[]; // Added tags
 }
