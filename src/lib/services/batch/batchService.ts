@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/db";
-import { VideoPlatform, VideoStatus } from "@generated/prisma";
+import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 import {
   getYouTubeTranscript,
   searchYouTubeVideos,
 } from "../youtube/youtubeService";
 import { analyzeTranscriptWithOpenAI } from "../openai/openaiService";
+import { OpenAIAnalysisResponse } from "../openai/openaiService";
 
 export interface BatchImportResult {
   videoId: string;
@@ -23,7 +24,10 @@ export interface BatchImportOptions {
 export async function batchImportVideos(
   options: BatchImportOptions,
 ): Promise<BatchImportResult[]> {
-  const { maxVideos = 100, categoryId, searchQuery } = options;
+  const {
+    maxVideos = 100,
+    /* categoryId (will be used as fallback or if OpenAI gives no categories) */ searchQuery,
+  } = options;
   const results: BatchImportResult[] = [];
 
   try {
@@ -60,7 +64,8 @@ export async function batchImportVideos(
         // Get transcript
         const transcriptResult = await getYouTubeTranscript(video.id);
         let transcriptText = null;
-        let openAIAnalysis = null;
+        let openAIAnalysis: OpenAIAnalysisResponse | null = null;
+        let isHowToVWVideoFromAnalysis = false;
 
         if (transcriptResult.success && transcriptResult.transcript) {
           transcriptText = transcriptResult.transcript;
@@ -70,44 +75,149 @@ export async function batchImportVideos(
             await analyzeTranscriptWithOpenAI(transcriptText);
           if (analysisResult.success && analysisResult.data) {
             openAIAnalysis = analysisResult.data;
+            isHowToVWVideoFromAnalysis = analysisResult.data.isHowToVWVideo;
+          } else {
+            console.warn(
+              `OpenAI analysis failed for ${video.id}: ${analysisResult.error}`,
+            );
+          }
+        } else {
+          console.log(
+            `No transcript for ${video.id}, cannot perform OpenAI analysis.`,
+          );
+        }
+
+        const videoStatus = isHowToVWVideoFromAnalysis
+          ? VideoStatus.DRAFT
+          : VideoStatus.REJECTED;
+
+        // Prepare data for video creation
+        const videoCreateData: Prisma.VideoCreateInput = {
+          platform: VideoPlatform.YOUTUBE,
+          videoId: video.id,
+          title: video.title,
+          isHowToVWVideo: isHowToVWVideoFromAnalysis,
+          sourceKeyword: searchQuery,
+          processedAt: new Date(),
+          status: videoStatus,
+        };
+
+        if (isHowToVWVideoFromAnalysis) {
+          // Populate richer details only if it's a HowToVWVideo
+          videoCreateData.description = video.description || "";
+          videoCreateData.url = `https://www.youtube.com/watch?v=${video.id}`;
+          videoCreateData.thumbnailUrl = video.thumbnailUrl;
+          videoCreateData.channelTitle = video.channelTitle;
+          videoCreateData.transcript = transcriptText;
+
+          // Handle categories
+          const categoryIdsToLink: number[] = [];
+          let categoriesSource: string | undefined;
+
+          if (
+            openAIAnalysis?.categories &&
+            openAIAnalysis.categories.length > 0
+          ) {
+            categoriesSource = "batch-import-openai";
+            for (const name of openAIAnalysis.categories) {
+              if (!name.trim()) continue;
+              let category = await prisma.category.findFirst({
+                where: { name: { equals: name.trim(), mode: "insensitive" } },
+              });
+              if (!category) {
+                try {
+                  category = await prisma.category.create({
+                    data: { name: name.trim() },
+                  });
+                } catch (createError: unknown) {
+                  // More robust check for PrismaClientKnownRequestError properties
+                  if (
+                    createError &&
+                    typeof createError === "object" &&
+                    "code" in createError &&
+                    "meta" in createError
+                    // && (createError as any).code === "P2002" //  More specific check if needed and 'as any' is acceptable temp solution
+                  ) {
+                    const prismaError = createError as {
+                      code: string;
+                      meta?: { target?: string[] };
+                    }; // Type assertion
+                    if (
+                      prismaError.code === "P2002" &&
+                      prismaError.meta?.target?.includes("name")
+                    ) {
+                      category = await prisma.category.findFirst({
+                        where: {
+                          name: { equals: name.trim(), mode: "insensitive" },
+                        },
+                      });
+                      if (!category) {
+                        console.error(
+                          `Failed to find or create category "${name.trim()}" after race condition.`,
+                        );
+                        continue;
+                      }
+                    } else {
+                      console.error(
+                        `Failed to create category "${name.trim()}" due to Prisma error code: ${prismaError.code}`,
+                      );
+                      continue;
+                    }
+                  } else if (createError instanceof Error) {
+                    console.error(
+                      `Failed to create category "${name.trim()}" due to error: ${createError.message}`,
+                    );
+                    continue;
+                  } else {
+                    console.error(
+                      `Failed to create category "${name.trim()}" due to unknown error:`,
+                      createError,
+                    );
+                    continue;
+                  }
+                }
+              }
+              if (category && !categoryIdsToLink.includes(category.id)) {
+                categoryIdsToLink.push(category.id);
+              }
+            }
+          } else if (options.categoryId) {
+            const catExists = await prisma.category.findUnique({
+              where: { id: options.categoryId },
+            });
+            if (catExists) {
+              categoryIdsToLink.push(options.categoryId);
+              categoriesSource = "batch-import-manual-option";
+            } else {
+              console.warn(
+                `Category ID ${options.categoryId} from batch options not found.`,
+              );
+            }
+          }
+
+          if (categoryIdsToLink.length > 0 && categoriesSource) {
+            videoCreateData.categories = {
+              create: categoryIdsToLink.map((catId) => ({
+                category: { connect: { id: catId } },
+                assignedBy: categoriesSource,
+              })),
+            };
           }
         }
 
-        // Only import if it's a VW video or if we couldn't analyze it
-        if (!openAIAnalysis || openAIAnalysis.isHowToVWVideo) {
-          const newVideo = await prisma.video.create({
-            data: {
-              platform: VideoPlatform.YOUTUBE,
-              videoId: video.id,
-              title: video.title,
-              description: video.description || "",
-              url: `https://www.youtube.com/watch?v=${video.id}`,
-              thumbnailUrl: video.thumbnailUrl,
-              transcript: transcriptText,
-              status: VideoStatus.DRAFT,
-              categories: {
-                create: [
-                  {
-                    category: { connect: { id: categoryId } },
-                    assignedBy: "batch-import",
-                  },
-                ],
-              },
-            },
-          });
+        const newVideo = await prisma.video.create({ data: videoCreateData });
 
-          results.push({
-            videoId: video.id,
-            success: true,
-            message: `Video "${newVideo.title}" imported successfully!`,
-          });
-        } else {
-          results.push({
-            videoId: video.id,
-            success: false,
-            message: `Video "${video.title}" is not a VW how-to video.`,
-          });
-        }
+        const categoriesLinkedCount = Array.isArray(
+          videoCreateData.categories?.create,
+        )
+          ? videoCreateData.categories.create.length
+          : 0;
+
+        results.push({
+          videoId: video.id,
+          success: true,
+          message: `Video "${newVideo.title}" processed. Status: ${newVideo.status}. Categories linked: ${categoriesLinkedCount}.`,
+        });
       } catch (error) {
         results.push({
           videoId: video.id,

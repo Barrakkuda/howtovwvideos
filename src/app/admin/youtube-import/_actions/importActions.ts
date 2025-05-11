@@ -34,21 +34,38 @@ export interface ImportYouTubeVideoPayload {
   videoData: YouTubeVideoItem;
   categoryId?: number; // For single, existing category selection
   categories?: string[]; // Changed from suggestedCategoryNames
+  isHowToVWVideo: boolean;
+  sourceKeyword: string;
+  channelTitle?: string;
 }
 
 // Action to import a video into the database
 export async function importYouTubeVideo(
   payload: ImportYouTubeVideoPayload,
 ): Promise<ImportVideoResponse> {
-  const { videoData, categoryId, categories } = payload;
+  const {
+    videoData,
+    categoryId,
+    categories,
+    isHowToVWVideo,
+    sourceKeyword,
+    channelTitle,
+  } = payload;
 
   if (!videoData || !videoData.id) {
     return { success: false, message: "Invalid video data provided." };
   }
 
-  // Validate that either categoryId or categories are provided
-  if (!categoryId && (!categories || categories.length === 0)) {
-    return { success: false, message: "No category information provided." };
+  // Validate that either categoryId or categories are provided IF it's a HowToVWVideo
+  if (
+    isHowToVWVideo &&
+    !categoryId &&
+    (!categories || categories.length === 0)
+  ) {
+    return {
+      success: false,
+      message: "No category information provided for a How-To VW video.",
+    };
   }
 
   let transcriptText: string | null = null;
@@ -83,99 +100,91 @@ export async function importYouTubeVideo(
 
     const categoryIdsToLink: number[] = [];
 
-    if (categoryId) {
-      // Ensure the single categoryId exists (optional check, Prisma connect will fail if not)
-      const catExists = await prisma.category.findUnique({
-        where: { id: categoryId },
-      });
-      if (!catExists) {
-        return {
-          success: false,
-          message: `Category with ID ${categoryId} not found.`,
-        };
-      }
-      categoryIdsToLink.push(categoryId);
-    } else if (categories && categories.length > 0) {
-      for (const name of categories) {
-        if (!name.trim()) continue; // Skip empty names
-
-        let category = await prisma.category.findFirst({
-          where: { name: { equals: name.trim(), mode: "insensitive" } },
-        });
-
-        if (!category) {
-          try {
-            category = await prisma.category.create({
-              data: { name: name.trim() },
-            });
-            console.log(
-              `Created new category: "${category.name}" with ID ${category.id}`,
-            );
-          } catch (createError: unknown) {
-            // Handle potential unique constraint violation if another process created it in the meantime
-            if (
-              createError instanceof Prisma.PrismaClientKnownRequestError &&
-              createError.code === "P2002" &&
-              (createError.meta?.target as string[])?.includes("name")
-            ) {
-              console.warn(
-                `Category "${name.trim()}" likely created by another process, fetching it.`,
-              );
-              category = await prisma.category.findFirst({
-                where: { name: { equals: name.trim(), mode: "insensitive" } },
-              });
-              if (!category) {
-                return {
-                  success: false,
-                  message: `Failed to create or find category "${name.trim()}" after race condition.`,
-                };
-              }
-            } else {
-              console.error(
-                `Failed to create category "${name.trim()}":`,
-                createError,
-              );
-              const errorMessage =
-                createError instanceof Error
-                  ? createError.message
-                  : "Unknown error during category creation";
-              return {
-                success: false,
-                message: `Failed to create category "${name.trim()}". Error: ${errorMessage}`,
-              };
-            }
-          }
-        }
-        if (category && !categoryIdsToLink.includes(category.id)) {
-          // Ensure no duplicates if names are similar casing
-          categoryIdsToLink.push(category.id);
-        }
-      }
-    }
-
-    if (categoryIdsToLink.length === 0) {
-      return {
-        success: false,
-        message: "No valid categories could be assigned to the video.",
-      };
-    }
-
     const videoCreateData: Prisma.VideoCreateInput = {
       platform: VideoPlatform.YOUTUBE,
       videoId: videoData.id,
-      title: videoData.title,
-      description: videoData.description || "",
-      url: `https://www.youtube.com/watch?v=${videoData.id}`,
-      thumbnailUrl: videoData.thumbnailUrl,
-      transcript: transcriptText,
-      status: VideoStatus.DRAFT,
-      categories: {
-        create: categoryIdsToLink.map((catId) => ({
-          category: { connect: { id: catId } },
-          assignedBy: "system-youtube-import",
-        })),
-      },
+      title: videoData.title, // Always save title
+      isHowToVWVideo: isHowToVWVideo,
+      sourceKeyword: sourceKeyword,
+      processedAt: new Date(),
+      status: isHowToVWVideo ? VideoStatus.DRAFT : VideoStatus.REJECTED, // Set status based on isHowToVWVideo
+      // Conditional fields based on isHowToVWVideo
+      ...(isHowToVWVideo && {
+        description: videoData.description || "",
+        url: `https://www.youtube.com/watch?v=${videoData.id}`,
+        thumbnailUrl: videoData.thumbnailUrl,
+        channelTitle: channelTitle, // From payload
+        transcript: transcriptText, // Fetched earlier in this function
+      }),
     };
+
+    if (isHowToVWVideo) {
+      if (categoryId) {
+        const catExists = await prisma.category.findUnique({
+          where: { id: categoryId },
+        });
+        if (!catExists) {
+          return {
+            success: false,
+            message: `Category with ID ${categoryId} not found.`,
+          };
+        }
+        categoryIdsToLink.push(categoryId);
+      } else if (categories && categories.length > 0) {
+        for (const name of categories) {
+          if (!name.trim()) continue;
+          let category = await prisma.category.findFirst({
+            where: { name: { equals: name.trim(), mode: "insensitive" } },
+          });
+          if (!category) {
+            try {
+              category = await prisma.category.create({
+                data: { name: name.trim() },
+              });
+            } catch (createError: unknown) {
+              if (
+                createError instanceof Prisma.PrismaClientKnownRequestError &&
+                createError.code === "P2002" &&
+                (createError.meta?.target as string[])?.includes("name")
+              ) {
+                category = await prisma.category.findFirst({
+                  where: { name: { equals: name.trim(), mode: "insensitive" } },
+                });
+                if (!category)
+                  return {
+                    success: false,
+                    message: `Failed to find category "${name.trim()}" after race condition.`,
+                  };
+              } else {
+                const errorMessage =
+                  createError instanceof Error
+                    ? createError.message
+                    : "Unknown error during category creation";
+                return {
+                  success: false,
+                  message: `Failed to create category "${name.trim()}". Error: ${errorMessage}`,
+                };
+              }
+            }
+          }
+          if (category && !categoryIdsToLink.includes(category.id)) {
+            categoryIdsToLink.push(category.id);
+          }
+        }
+      }
+      if (categoryIdsToLink.length > 0) {
+        videoCreateData.categories = {
+          create: categoryIdsToLink.map((catId) => ({
+            category: { connect: { id: catId } },
+            assignedBy: "youtube-import-form",
+          })),
+        };
+      } else {
+        // If it's a HowToVWVideo but no valid categories could be linked (e.g., OpenAI suggested none, user selected none)
+        // This case might need specific handling based on business rules, for now, it won't link any.
+        // The form validation should ideally prevent this if categories are mandatory for HowToVWVideo.
+      }
+    }
 
     const newVideo = await prisma.video.create({ data: videoCreateData });
 
@@ -201,7 +210,47 @@ export async function searchYouTubeVideos(
   query: string,
   maxResults: number = 10,
 ): Promise<YouTubeSearchResponse> {
-  return searchVideosService(query, maxResults);
+  const serviceResponse = await searchVideosService(query, maxResults);
+
+  if (
+    !serviceResponse.success ||
+    !serviceResponse.data ||
+    serviceResponse.data.length === 0
+  ) {
+    return serviceResponse; // Return original response if search failed or no videos found
+  }
+
+  // Filter out videos that already exist in the database
+  const youtubeVideoIds = serviceResponse.data.map((video) => video.id);
+  const existingVideos = await prisma.video.findMany({
+    where: {
+      videoId: { in: youtubeVideoIds },
+    },
+    select: {
+      videoId: true, // Only select the videoId for checking existence
+    },
+  });
+
+  const existingVideoIds = new Set(existingVideos.map((v) => v.videoId));
+  const newVideos = serviceResponse.data.filter(
+    (video) => !existingVideoIds.has(video.id),
+  );
+
+  if (newVideos.length === 0 && serviceResponse.data.length > 0) {
+    // All videos found were already in the DB
+    return {
+      success: true, // Search itself was successful
+      data: [], // Return empty array
+      error:
+        "All videos found in the search results already exist in the database.",
+      // Consider if quotaExceeded should be handled or passed through. Assuming not for this specific case.
+    };
+  }
+
+  return {
+    ...serviceResponse,
+    data: newVideos, // Return only the videos not already in the DB
+  };
 }
 
 // Wrapper for getting transcript service (for UI display)

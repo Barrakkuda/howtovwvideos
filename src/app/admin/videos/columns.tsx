@@ -34,7 +34,7 @@ export type VideoEntry = {
   videoId: string | null;
   title: string;
   url: string | null;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; // Match your VideoStatus enum
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "REJECTED"; // Added "REJECTED"
   categories: Array<{
     // This represents an entry from the CategoriesOnVideos join table
     category: {
@@ -123,6 +123,10 @@ export const columns: ColumnDef<VideoEntry>[] = [
         case "ARCHIVED":
           statusClass =
             "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100";
+          break;
+        case "REJECTED":
+          statusClass =
+            "bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100";
           break;
         default:
           statusClass = "bg-gray-200 text-gray-700";

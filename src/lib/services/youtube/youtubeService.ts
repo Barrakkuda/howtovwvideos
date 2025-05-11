@@ -53,7 +53,7 @@ function decodeHtmlEntities(text: string): string {
 
 export async function searchYouTubeVideos(
   query: string,
-  maxResults: number = 10,
+  maxResults: number = 100,
 ): Promise<YouTubeSearchResponse> {
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");

@@ -129,8 +129,11 @@ export default function YouTubeImportForm({
       return;
     }
 
+    const analysis = openaiAnalysis[video.id]?.analysis;
+    // Determine isHowToVWVideo. Default to false if analysis not present or field missing.
+    const isVWHowTo = analysis?.isHowToVWVideo === true;
+
     if (selectedCategoryOption === AUTO_GENERATED_CATEGORY_VALUE) {
-      const analysis = openaiAnalysis[video.id]?.analysis;
       if (
         !analysis ||
         !analysis.categories ||
@@ -152,6 +155,9 @@ export default function YouTubeImportForm({
       importPayload = {
         videoData: video,
         categories: analysis.categories,
+        isHowToVWVideo: isVWHowTo, // Pass determined value
+        sourceKeyword: searchQuery, // Pass current search query
+        channelTitle: video.channelTitle, // Pass from YouTubeVideoItem
       };
     } else {
       const categoryId = parseInt(selectedCategoryOption, 10);
@@ -159,7 +165,13 @@ export default function YouTubeImportForm({
         toast.error("Invalid category selected.");
         return; // Should not happen if UI is correct
       }
-      importPayload = { videoData: video, categoryId: categoryId };
+      importPayload = {
+        videoData: video,
+        categoryId: categoryId,
+        isHowToVWVideo: isVWHowTo, // Pass determined value
+        sourceKeyword: searchQuery, // Pass current search query
+        channelTitle: video.channelTitle, // Pass from YouTubeVideoItem
+      };
     }
 
     setImportStatus((prev) => ({
@@ -373,10 +385,6 @@ export default function YouTubeImportForm({
 
               const importingOrImported = status.importing || status.imported;
 
-              const openAIAnalysisBlocksImport =
-                analysisStatus?.analysis &&
-                analysisStatus.analysis.isHowToVWVideo === false;
-
               const hasOpenAISuggestions =
                 analysisStatus?.analysis?.categories &&
                 analysisStatus.analysis.categories.length > 0;
@@ -482,7 +490,6 @@ export default function YouTubeImportForm({
                         onClick={() => handleImport(video)}
                         disabled={
                           importingOrImported ||
-                          openAIAnalysisBlocksImport ||
                           !hasValidCategorySelectionForImport
                         }
                         className="w-full sm:w-auto"

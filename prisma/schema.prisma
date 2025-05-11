@@ -24,18 +24,24 @@ model Category {
 }
 
 model Video {
-  id           Int                  @id @default(autoincrement())
-  platform     VideoPlatform
-  videoId      String               @unique // YouTube video ID, platform-specific ID
-  title        String
-  description  String?
-  url          String? // Made optional, can be derived or from API
-  thumbnailUrl String?
-  transcript   String? // Added field for video transcript
-  status       VideoStatus          @default(DRAFT)
-  categories   CategoriesOnVideos[]
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id              Int                  @id @default(autoincrement())
+  platform        VideoPlatform
+  videoId         String               @unique // YouTube video ID, platform-specific ID
+  title           String
+  description     String?
+  url             String? // Made optional, can be derived or from API
+  thumbnailUrl    String?
+  channelTitle    String?
+  transcript      String? // Added field for video transcript
+  status          VideoStatus          @default(DRAFT)
+  isHowToVWVideo  Boolean              @default(false)
+  categories      CategoriesOnVideos[]
+  vwTypes         VWType[]
+  processingError String?
+  sourceKeyword   String?
+  processedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 // New join table for Videos and Categories
@@ -54,10 +60,23 @@ enum VideoStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+  REJECTED
 }
 
 // Define VideoPlatform enum
 enum VideoPlatform {
   YOUTUBE
   VIMEO
+}
+
+// NEW ENUM
+enum VWType {
+  BEETLE
+  GHIA
+  THING
+  BUS
+  OFF_ROAD
+  TYPE3
+  TYPE4
+  ALL
 }
