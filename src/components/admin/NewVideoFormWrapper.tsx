@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import VideoForm from "@/components/admin/VideoForm";
 import { addVideo } from "@/app/admin/videos/_actions/videoActions"; // Corrected path
 import { VideoFormData } from "@/lib/validators/video";
-import { Category } from "@generated/prisma";
+import { Category, VWType } from "@generated/prisma";
 import { toast } from "sonner";
 
 interface NewVideoFormWrapperProps {
@@ -47,6 +47,7 @@ export default function NewVideoFormWrapper({
   return (
     <VideoForm
       categories={categories}
+      vwTypeEnumValues={Object.values(VWType)}
       onSubmit={handleSubmitVideo}
       isSubmitting={isSubmitting}
     />

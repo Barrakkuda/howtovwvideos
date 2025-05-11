@@ -198,8 +198,8 @@ export async function importYouTubeVideo(
       }
     }
 
-    // Handle vwTypes and tags from OpenAI analysis if available
-    if (openAIAnalysisData) {
+    // Handle vwTypes and tags from OpenAI analysis if available, *only if it's a HowToVWVideo*
+    if (isHowToVWVideo && openAIAnalysisData) {
       if (openAIAnalysisData.vwTypes && openAIAnalysisData.vwTypes.length > 0) {
         const mappedVwTypes = openAIAnalysisData.vwTypes
           .map(mapStringToVWType) // Use the helper function
@@ -236,7 +236,7 @@ export async function importYouTubeVideo(
 // Wrapper for YouTube search service
 export async function searchYouTubeVideos(
   query: string,
-  maxResults: number = 10,
+  maxResults: number = 50,
 ): Promise<YouTubeSearchResponse> {
   const serviceResponse = await searchVideosService(query, maxResults);
 

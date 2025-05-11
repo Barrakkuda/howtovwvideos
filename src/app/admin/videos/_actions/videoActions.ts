@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
-import { VideoStatus, VideoPlatform, Prisma } from "@generated/prisma";
+import { VideoStatus, VideoPlatform, Prisma, VWType } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function addVideo(formData: VideoFormData) {
@@ -29,6 +29,7 @@ export async function addVideo(formData: VideoFormData) {
         thumbnailUrl: data.thumbnailUrl as string | null,
         status: data.status as VideoStatus,
         tags: data.tags,
+        vwTypes: data.vwTypes as VWType[] | undefined,
         categories: {
           create: data.categoryIds.map((catId) => ({
             category: { connect: { id: catId } },
@@ -125,6 +126,7 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         thumbnailUrl: data.thumbnailUrl as string | null,
         status: data.status as VideoStatus,
         tags: data.tags,
+        vwTypes: data.vwTypes as VWType[] | undefined,
       };
 
       // 3. If new categoryIds are provided, add them to the update data

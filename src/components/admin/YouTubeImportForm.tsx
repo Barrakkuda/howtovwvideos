@@ -155,9 +155,10 @@ export default function YouTubeImportForm({
       importPayload = {
         videoData: video,
         categories: analysis.categories,
-        isHowToVWVideo: isVWHowTo, // Pass determined value
-        sourceKeyword: searchQuery, // Pass current search query
-        channelTitle: video.channelTitle, // Pass from YouTubeVideoItem
+        isHowToVWVideo: isVWHowTo,
+        sourceKeyword: searchQuery,
+        channelTitle: video.channelTitle,
+        openAIAnalysisData: analysis ?? undefined,
       };
     } else {
       const categoryId = parseInt(selectedCategoryOption, 10);
@@ -168,9 +169,10 @@ export default function YouTubeImportForm({
       importPayload = {
         videoData: video,
         categoryId: categoryId,
-        isHowToVWVideo: isVWHowTo, // Pass determined value
-        sourceKeyword: searchQuery, // Pass current search query
-        channelTitle: video.channelTitle, // Pass from YouTubeVideoItem
+        isHowToVWVideo: isVWHowTo,
+        sourceKeyword: searchQuery,
+        channelTitle: video.channelTitle,
+        openAIAnalysisData: analysis ?? undefined,
       };
     }
 

@@ -53,7 +53,7 @@ function decodeHtmlEntities(text: string): string {
 
 export async function searchYouTubeVideos(
   query: string,
-  maxResults: number = 100,
+  maxResults: number = 50,
 ): Promise<YouTubeSearchResponse> {
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");
@@ -73,15 +73,21 @@ export async function searchYouTubeVideos(
     q: query,
     part: "snippet",
     type: "video",
-    maxResults: maxResults.toString(),
   });
+  params.append("maxResults", maxResults.toString());
+  // Optionally, add other parameters like 'pageToken' if implementing pagination
+
+  const fetchUrl = `${YOUTUBE_API_URL}?${params.toString()}`;
+  // console.log(`Fetching from YouTube API: ${fetchUrl}`); // Log the full URL -- REMOVED
 
   try {
-    const response = await fetch(`${YOUTUBE_API_URL}?${params.toString()}`);
+    const response = await fetch(fetchUrl);
     const data = await response.json();
+    // console.log("Raw YouTube API Response Data:", JSON.stringify(data, null, 2)); // Log the raw data object -- REMOVED
 
     if (!response.ok) {
-      console.error("YouTube API Error:", data);
+      // console.error("YouTube API Error (raw data logged above):", data.error?.message || data); -- Keep this error log for actual errors
+      console.error("YouTube API Error:", data.error?.message || data);
       const errorMessage =
         data.error?.message ||
         "An unknown error occurred with the YouTube API.";
@@ -95,6 +101,9 @@ export async function searchYouTubeVideos(
       };
     }
 
+    // console.log(
+    //   `YouTube API returned ${data.items ? data.items.length : 0} items for query: ${query}`,
+    // ); // -- REMOVED
     if (!data.items || data.items.length === 0) {
       return { success: true, data: [] };
     }

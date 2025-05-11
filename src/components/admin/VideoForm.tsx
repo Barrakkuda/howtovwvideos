@@ -1,7 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Category, VideoStatus, VideoPlatform } from "@generated/prisma"; // Assuming Prisma client is in node_modules
+import {
+  Category,
+  VideoStatus,
+  VideoPlatform,
+  VWType,
+} from "@generated/prisma"; // Added VWType
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 
@@ -40,13 +45,27 @@ import { XIcon } from "lucide-react";
 
 interface VideoFormProps {
   categories: Category[];
+  vwTypeEnumValues: VWType[]; // Prop to pass VWType enum values
   initialData?: Partial<VideoFormData>; // For editing
   onSubmit: (data: VideoFormData) => Promise<void>;
   isSubmitting: boolean;
 }
 
+// Helper function to format VWType names for display
+const formatVWTypeName = (vwType: VWType): string => {
+  if (!vwType) return "";
+  // Example: OFF_ROAD -> Off Road, TYPE3 -> Type 3
+  return vwType
+    .replace(/_/g, " ")
+    .replace(/(\D)(\d)/g, "$1 $2") // Add space between non-digit and digit like TYPE3 -> TYPE 3
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 export default function VideoForm({
   categories,
+  vwTypeEnumValues, // Destructure the new prop
   initialData,
   onSubmit,
   isSubmitting,
@@ -58,8 +77,9 @@ export default function VideoForm({
     defaultValues: initialData
       ? {
           ...initialData,
-          categoryIds: initialData.categoryIds || [], // Ensure categoryIds is an array
-          tags: initialData.tags || [], // Initialize tags
+          categoryIds: initialData.categoryIds || [],
+          tags: initialData.tags || [],
+          vwTypes: initialData.vwTypes || [], // Initialize vwTypes
         }
       : {
           platform: VideoPlatform.YOUTUBE,
@@ -68,9 +88,10 @@ export default function VideoForm({
           description: "",
           url: "",
           thumbnailUrl: "",
-          categoryIds: [], // Initialize with an empty array for new videos
+          categoryIds: [],
           status: VideoStatus.DRAFT,
-          tags: [], // Initialize tags for new videos
+          tags: [],
+          vwTypes: [], // Initialize for new videos
         },
   });
 
@@ -289,6 +310,69 @@ export default function VideoForm({
             </FormItem>
           )}
         />
+
+        {/* VWTypes Field Start */}
+        <FormField
+          control={form.control}
+          name="vwTypes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>VW Types</FormLabel>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      {field.value && field.value.length > 0
+                        ? field.value.length === 1
+                          ? formatVWTypeName(field.value[0])
+                          : `${field.value.length} VW Types selected`
+                        : "Select VW Types"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                  <DropdownMenuLabel>Available VW Types</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {vwTypeEnumValues.map((vwType) => (
+                    <DropdownMenuCheckboxItem
+                      key={vwType}
+                      checked={field.value?.includes(vwType)}
+                      onCheckedChange={(checked) => {
+                        const currentVwTypes = field.value || [];
+                        if (checked) {
+                          field.onChange([...currentVwTypes, vwType]);
+                        } else {
+                          field.onChange(
+                            currentVwTypes.filter((vwt) => vwt !== vwType),
+                          );
+                        }
+                      }}
+                    >
+                      {formatVWTypeName(vwType)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Display selected VW Type names */}
+              {field.value && field.value.length > 0 && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  <strong>Selected:</strong>{" "}
+                  {field.value.map(formatVWTypeName).join(", ")}
+                </div>
+              )}
+              <FormDescription>
+                Choose one or more applicable VW Types for this video.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {/* VWTypes Field End */}
 
         {/* Tags Field Start */}
         <FormField

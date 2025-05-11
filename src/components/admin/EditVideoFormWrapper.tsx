@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Category, VideoPlatform, Prisma } from "@generated/prisma";
+import { Category, VideoPlatform, Prisma, VWType } from "@generated/prisma";
 
 import VideoForm from "@/components/admin/VideoForm";
 import { updateVideo } from "@/app/admin/videos/_actions/videoActions";
@@ -50,10 +50,10 @@ export default function EditVideoFormWrapper({
       (cov: CategoriesOnVideosWithCategory) => cov.categoryId,
     ),
     status: video.status,
-    platform: video.platform, // Add platform here
-    transcript: video.transcript, // Add transcript here
-    tags: video.tags || [], // Add tags here
-    // Ensure all fields in VideoFormData are covered here if they exist in Video
+    platform: video.platform,
+    transcript: video.transcript,
+    tags: video.tags || [],
+    vwTypes: video.vwTypes || [],
   };
 
   // console.log("[EditVideoFormWrapper] Video URL:", video.url); // Log the video URL
@@ -93,7 +93,8 @@ export default function EditVideoFormWrapper({
       <div className="lg:col-span-2">
         <VideoForm
           categories={categories}
-          initialData={initialFormData} // Pass the transformed video data
+          vwTypeEnumValues={Object.values(VWType)}
+          initialData={initialFormData}
           onSubmit={handleSubmitVideo}
           isSubmitting={isSubmitting}
         />

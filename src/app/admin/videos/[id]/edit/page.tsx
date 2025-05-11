@@ -1,4 +1,3 @@
-console.log("Executing src/app/admin/videos/[id]/edit/page.tsx"); // Top-level log
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import EditVideoFormWrapper from "@/components/admin/EditVideoFormWrapper";

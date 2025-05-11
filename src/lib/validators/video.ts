@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VideoStatus, VideoPlatform } from "@generated/prisma"; // Added VideoPlatform
+import { VideoStatus, VideoPlatform, VWType } from "@generated/prisma"; // Added VideoPlatform and VWType
 
 export const videoSchema = z.object({
   platform: z.nativeEnum(VideoPlatform), // Added platform field
@@ -24,6 +24,10 @@ export const videoSchema = z.object({
     .array(z.string()) // Each tag itself is a string
     .optional()
     .default([]), // Default to an empty array if not provided
+  vwTypes: z
+    .array(z.nativeEnum(VWType)) // Array of VWType enum values
+    .optional()
+    .default([]),
 });
 
 // export type VideoFormData = z.infer<typeof videoSchema>;
@@ -40,4 +44,5 @@ export interface VideoFormData {
   status?: VideoStatus;
   transcript?: string | null; // Added for displaying in form
   tags?: string[]; // Added tags
+  vwTypes?: VWType[]; // Added vwTypes
 }
