@@ -70,7 +70,7 @@ async function fetchPublishedVideos({
   const videos: VideoForCardDisplay[] = videosData.map((v) => ({
     id: v.id,
     title: v.title,
-    thumbnailUrl: v.thumbnailUrl, // Reverted: Use the URL directly from DB
+    thumbnailUrl: v.thumbnailUrl,
     url: `/videos/${v.id}`, // Assuming detail page structure: /videos/[id]
     // If you have a slug: url: `/videos/${v.slug}`,
   }));

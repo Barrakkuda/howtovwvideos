@@ -32,6 +32,7 @@ model Video {
   url             String? // Made optional, can be derived or from API
   thumbnailUrl    String?
   channelTitle    String?
+  channelUrl      String?
   transcript      String? // Added field for video transcript
   status          VideoStatus          @default(DRAFT)
   isHowToVWVideo  Boolean              @default(false)

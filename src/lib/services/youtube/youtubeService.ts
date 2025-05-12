@@ -6,6 +6,7 @@ export interface YouTubeVideoItem {
   description: string;
   thumbnailUrl: string;
   channelTitle: string;
+  channelUrl: string;
   publishedAt: string;
 }
 
@@ -14,6 +15,12 @@ export interface YouTubeSearchResponse {
   data?: YouTubeVideoItem[];
   error?: string;
   quotaExceeded?: boolean;
+}
+
+export interface YouTubeVideoInfoResponse {
+  success: boolean;
+  data?: YouTubeVideoItem;
+  error?: string;
 }
 
 interface YouTubeApiError {
@@ -197,4 +204,86 @@ export async function getYouTubeTranscript(
   }
 
   return { success: false, error: errorMessage };
+}
+
+export async function getYouTubeVideoInfo(
+  videoId: string,
+): Promise<YouTubeVideoInfoResponse> {
+  if (!YOUTUBE_API_KEY) {
+    console.error("YouTube API key is not configured.");
+    return {
+      success: false,
+      error:
+        "YouTube API key is not configured. Please check server configuration.",
+    };
+  }
+
+  if (!videoId) {
+    return { success: false, error: "Video ID is required." };
+  }
+
+  const params = new URLSearchParams({
+    key: YOUTUBE_API_KEY,
+    id: videoId,
+    part: "snippet",
+  });
+
+  const fetchUrl = `${YOUTUBE_API_URL.replace("/search", "/videos")}?${params.toString()}`;
+
+  try {
+    const response = await fetch(fetchUrl);
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("YouTube API Error:", data.error?.message || data);
+      const errorMessage =
+        data.error?.message ||
+        "An unknown error occurred with the YouTube API.";
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+
+    if (!data.items || data.items.length === 0) {
+      return { success: false, error: "Video not found." };
+    }
+
+    const item = data.items[0];
+    const thumbs = item.snippet.thumbnails;
+    let selectedThumbnailUrl = thumbs.default.url;
+
+    if (thumbs.standard?.url) {
+      selectedThumbnailUrl = thumbs.standard.url;
+    } else if (thumbs.high?.url) {
+      selectedThumbnailUrl = thumbs.high.url;
+    } else if (thumbs.medium?.url) {
+      selectedThumbnailUrl = thumbs.medium.url;
+    }
+
+    // Get channel ID from the snippet
+    const channelId = item.snippet.channelId;
+    const channelUrl = `https://www.youtube.com/channel/${channelId}`;
+
+    const videoInfo: YouTubeVideoItem = {
+      id: item.id,
+      title: decodeHtmlEntities(item.snippet.title),
+      description: decodeHtmlEntities(item.snippet.description),
+      thumbnailUrl: selectedThumbnailUrl,
+      channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
+      channelUrl,
+      publishedAt: item.snippet.publishedAt,
+    };
+
+    return { success: true, data: videoInfo };
+  } catch (error) {
+    console.error("Failed to fetch from YouTube API:", error);
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return {
+      success: false,
+      error: "An unexpected error occurred while fetching video information.",
+    };
+  }
 }

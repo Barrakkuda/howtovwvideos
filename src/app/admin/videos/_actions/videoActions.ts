@@ -4,6 +4,11 @@ import { prisma } from "@/lib/db";
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
 import { VideoStatus, VideoPlatform, Prisma, VWType } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
+import {
+  getYouTubeTranscript as getTranscriptService,
+  getYouTubeVideoInfo,
+} from "@/lib/services/youtube/youtubeService";
+import { analyzeTranscriptWithOpenAI as analyzeTranscriptService } from "@/lib/services/openai/openaiService";
 
 export async function addVideo(formData: VideoFormData) {
   const result = videoSchema.safeParse(formData);
@@ -27,6 +32,8 @@ export async function addVideo(formData: VideoFormData) {
         description: data.description as string | null,
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
+        channelTitle: data.channelTitle as string | null,
+        channelUrl: data.channelUrl as string | null,
         status: data.status as VideoStatus,
         tags: data.tags,
         vwTypes: data.vwTypes as VWType[] | undefined,
@@ -124,9 +131,13 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         description: data.description as string | null,
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
+        channelTitle: data.channelTitle as string | null,
+        channelUrl: data.channelUrl as string | null,
         status: data.status as VideoStatus,
         tags: data.tags,
         vwTypes: data.vwTypes as VWType[] | undefined,
+        isHowToVWVideo:
+          data.status === VideoStatus.PUBLISHED ? true : undefined,
       };
 
       // 3. If new categoryIds are provided, add them to the update data
@@ -181,6 +192,241 @@ export async function updateVideo(id: number, formData: VideoFormData) {
     return {
       success: false,
       message: errorMessage,
+    };
+  }
+}
+
+// Helper function to map string to VWType enum value
+function mapStringToVWType(typeString: string): VWType | undefined {
+  const upperTypeString = typeString.toUpperCase();
+  if (upperTypeString in VWType) {
+    return VWType[upperTypeString as keyof typeof VWType];
+  }
+  console.warn(`Unknown VWType string from OpenAI: ${typeString}`);
+  return undefined;
+}
+
+export async function getVideoTranscript(videoId: string) {
+  try {
+    const transcriptResponse = await getTranscriptService(videoId);
+    if (transcriptResponse.success && transcriptResponse.transcript) {
+      // Update the video with the transcript
+      await prisma.video.update({
+        where: { videoId },
+        data: { transcript: transcriptResponse.transcript },
+      });
+      revalidatePath("/admin/videos");
+      return {
+        success: true,
+        message: "Transcript fetched and saved successfully!",
+        transcript: transcriptResponse.transcript,
+      };
+    } else {
+      return {
+        success: false,
+        message: transcriptResponse.error || "Failed to fetch transcript",
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching transcript:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to fetch transcript",
+    };
+  }
+}
+
+export async function analyzeVideoWithOpenAI(videoId: string) {
+  try {
+    // Get the video and its transcript
+    const video = await prisma.video.findUnique({
+      where: { videoId },
+      select: { transcript: true, title: true },
+    });
+
+    if (!video) {
+      return {
+        success: false,
+        message: "Video not found",
+      };
+    }
+
+    if (!video.transcript) {
+      return {
+        success: false,
+        message:
+          "No transcript available for analysis. Please fetch the transcript first.",
+      };
+    }
+
+    // Get existing categories for reference
+    const categoriesFromDb = await prisma.category.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    });
+    const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
+    const availableVWTypeNames = Object.values(VWType);
+
+    // Analyze the transcript
+    const analysisResponse = await analyzeTranscriptService(
+      video.transcript,
+      existingCategoryNames,
+      availableVWTypeNames,
+      video.title,
+    );
+
+    if (!analysisResponse.success || !analysisResponse.data) {
+      return {
+        success: false,
+        message: analysisResponse.error || "Failed to analyze transcript",
+      };
+    }
+
+    const { data: analysis } = analysisResponse;
+
+    // Update the video with the analysis results
+    const updateData: Prisma.VideoUpdateInput = {};
+
+    // Update VW Types if available
+    if (analysis.vwTypes && analysis.vwTypes.length > 0) {
+      const mappedVwTypes = analysis.vwTypes
+        .map(mapStringToVWType)
+        .filter((type): type is VWType => type !== undefined);
+      if (mappedVwTypes.length > 0) {
+        updateData.vwTypes = mappedVwTypes;
+      }
+    }
+
+    // Update tags if available
+    if (analysis.tags && analysis.tags.length > 0) {
+      updateData.tags = analysis.tags;
+    }
+
+    // Update categories if available
+    if (analysis.categories && analysis.categories.length > 0) {
+      // First, find or create categories
+      const categoryIds: number[] = [];
+      for (const name of analysis.categories) {
+        if (!name.trim()) continue;
+        let category = await prisma.category.findFirst({
+          where: { name: { equals: name.trim(), mode: "insensitive" } },
+        });
+        if (!category) {
+          category = await prisma.category.create({
+            data: { name: name.trim() },
+          });
+        }
+        if (category && !categoryIds.includes(category.id)) {
+          categoryIds.push(category.id);
+        }
+      }
+
+      // Then update the video's categories
+      if (categoryIds.length > 0) {
+        // First remove existing categories
+        await prisma.categoriesOnVideos.deleteMany({
+          where: { video: { videoId } },
+        });
+        // Then add new ones
+        updateData.categories = {
+          create: categoryIds.map((catId) => ({
+            category: { connect: { id: catId } },
+            assignedBy: "openai-analysis",
+          })),
+        };
+      }
+    }
+
+    // Update the video with all the changes
+    await prisma.video.update({
+      where: { videoId },
+      data: updateData,
+    });
+
+    revalidatePath("/admin/videos");
+    return {
+      success: true,
+      message: "Video analyzed and updated successfully!",
+      analysis: analysisResponse.data,
+    };
+  } catch (error) {
+    console.error("Error analyzing video:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to analyze video",
+    };
+  }
+}
+
+export async function refetchVideoInfo(videoId: string) {
+  try {
+    // Get the video to check its platform and current data
+    const video = await prisma.video.findUnique({
+      where: { videoId },
+      select: {
+        platform: true,
+        title: true,
+        status: true,
+      },
+    });
+
+    if (!video) {
+      return {
+        success: false,
+        message: "Video not found",
+      };
+    }
+
+    if (video.platform !== VideoPlatform.YOUTUBE) {
+      return {
+        success: false,
+        message: "Refetching video info is only supported for YouTube videos",
+      };
+    }
+
+    // Fetch fresh data from YouTube
+    const videoInfo = await getYouTubeVideoInfo(videoId);
+    if (!videoInfo.success || !videoInfo.data) {
+      return {
+        success: false,
+        message:
+          videoInfo.error || "Failed to fetch video information from YouTube",
+      };
+    }
+
+    const { data } = videoInfo;
+
+    // Update the video with the fetched information
+    const updateData: Prisma.VideoUpdateInput = {
+      title: data.title,
+      description: data.description || "",
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      thumbnailUrl: data.thumbnailUrl,
+      channelTitle: data.channelTitle,
+      channelUrl: data.channelUrl,
+    };
+
+    await prisma.video.update({
+      where: { videoId },
+      data: updateData,
+    });
+
+    revalidatePath("/admin/videos");
+    return {
+      success: true,
+      message: "Video information updated successfully",
+      data: updateData,
+    };
+  } catch (error) {
+    console.error("Error refetching video info:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to refetch video information",
     };
   }
 }

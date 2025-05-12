@@ -40,7 +40,6 @@ export interface ImportYouTubeVideoPayload {
   categories?: string[];
   isHowToVWVideo: boolean;
   sourceKeyword: string;
-  channelTitle?: string;
   openAIAnalysisData?: OpenAIAnalysisResponse;
 }
 
@@ -64,7 +63,6 @@ export async function importYouTubeVideo(
     categories,
     isHowToVWVideo,
     sourceKeyword,
-    channelTitle,
     openAIAnalysisData,
   } = payload;
 
@@ -129,7 +127,8 @@ export async function importYouTubeVideo(
         description: videoData.description || "",
         url: `https://www.youtube.com/watch?v=${videoData.id}`,
         thumbnailUrl: videoData.thumbnailUrl,
-        channelTitle: channelTitle,
+        channelTitle: videoData.channelTitle,
+        channelUrl: videoData.channelUrl,
         transcript: transcriptText,
       }),
     };

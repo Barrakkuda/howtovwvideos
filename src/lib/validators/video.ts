@@ -16,6 +16,12 @@ export const videoSchema = z.object({
     .url({ message: "Invalid URL format" })
     .optional()
     .or(z.literal("")),
+  channelTitle: z.string().optional(),
+  channelUrl: z
+    .string()
+    .url({ message: "Invalid channel URL format" })
+    .optional()
+    .or(z.literal("")),
   categoryIds: z
     .array(z.coerce.number().int().positive())
     .min(1, { message: "Please select at least one category" }),
@@ -32,6 +38,8 @@ export interface VideoFormData {
   description?: string;
   url?: string;
   thumbnailUrl?: string;
+  channelTitle?: string;
+  channelUrl?: string;
   categoryIds: number[];
   status?: VideoStatus;
   transcript?: string | null;

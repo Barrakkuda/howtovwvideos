@@ -153,7 +153,6 @@ export default function YouTubeImportForm({
         categories: analysis.categories,
         isHowToVWVideo: isVWHowTo,
         sourceKeyword: searchQuery,
-        channelTitle: video.channelTitle,
         openAIAnalysisData: analysis ?? undefined,
       };
     } else {
@@ -167,7 +166,6 @@ export default function YouTubeImportForm({
         categoryId: categoryId,
         isHowToVWVideo: isVWHowTo,
         sourceKeyword: searchQuery,
-        channelTitle: video.channelTitle,
         openAIAnalysisData: analysis ?? undefined,
       };
     }
