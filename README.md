@@ -1,4 +1,5 @@
 Video Auto Categorization and Tagging Tool (Now HowToVWvideos)
+
 Built with Next.js, it has an admin dashboard with videos and categories admin pages, and manual/batch import options. Uses the YouTube Data API to search for videos with a given keyword, get's the transcripts and prompts OpenAI to categorize and suggest tags for the videos.
 
 ## Tech Stack
