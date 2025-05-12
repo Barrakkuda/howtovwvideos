@@ -9,12 +9,10 @@ import VideoForm from "@/components/admin/VideoForm";
 import { updateVideo } from "@/app/admin/videos/_actions/videoActions";
 import { VideoFormData } from "@/lib/validators/video";
 
-// Define a more specific type for the video prop, including its relations
 type CategoriesOnVideosWithCategory = Prisma.CategoriesOnVideosGetPayload<{
   include: { category: true };
 }>;
 
-// Define a more specific type for the video prop, including its relations
 type VideoWithCategories = Prisma.VideoGetPayload<{
   include: {
     categories: {
@@ -26,7 +24,7 @@ type VideoWithCategories = Prisma.VideoGetPayload<{
 }>;
 
 interface EditVideoFormWrapperProps {
-  video: VideoWithCategories; // Use the more specific type
+  video: VideoWithCategories;
   categories: Category[];
 }
 
@@ -38,14 +36,14 @@ export default function EditVideoFormWrapper({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Transform the Prisma Video object to VideoFormData for the form
-  // This is important if your Video model has fields/types not directly usable by the form
+  // This is important if the Video model has fields/types not directly usable by the form
   // or if VideoFormData has a slightly different structure.
   const initialFormData: Partial<VideoFormData> = {
     videoId: video.videoId,
     title: video.title,
-    description: video.description || "", // Ensure description is not null for the form if schema expects string
+    description: video.description || "",
     url: video.url || "",
-    thumbnailUrl: video.thumbnailUrl || "", // Ensure thumbnailUrl is not null for the form if schema expects string
+    thumbnailUrl: video.thumbnailUrl || "",
     categoryIds: video.categories.map(
       (cov: CategoriesOnVideosWithCategory) => cov.categoryId,
     ),
@@ -56,21 +54,13 @@ export default function EditVideoFormWrapper({
     vwTypes: video.vwTypes || [],
   };
 
-  // console.log("[EditVideoFormWrapper] Video URL:", video.url); // Log the video URL
-  // const videoInfo = useMemo(() => {
-  //   const info = getVideoPlatformInfo(video.url);
-  //   console.log("[EditVideoFormWrapper] videoInfo from util:", info); // Log the result from util
-  //   return info;
-  // }, [video.url]);
-
   async function handleSubmitVideo(data: VideoFormData) {
     setIsSubmitting(true);
     try {
       const result = await updateVideo(video.id, data);
       if (result.success) {
         toast.success(result.message || "Video updated successfully!");
-        router.push("/admin/videos"); // Navigate back to the videos list
-        // router.refresh(); // Not strictly necessary if revalidatePath is working well from server action
+        router.push("/admin/videos");
       } else {
         let errorMessages = result.message || "An error occurred.";
         if (result.errors) {

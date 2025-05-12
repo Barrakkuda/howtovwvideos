@@ -6,7 +6,7 @@ import {
   VideoStatus,
   VideoPlatform,
   VWType,
-} from "@generated/prisma"; // Added VWType
+} from "@generated/prisma";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 
@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-// import { Checkbox } from "@/components/ui/checkbox"; // If using checkbox for status
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -40,13 +39,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronsUpDown } from "lucide-react"; // For the trigger button
+import { ChevronsUpDown } from "lucide-react";
 import { XIcon } from "lucide-react";
 
 interface VideoFormProps {
   categories: Category[];
-  vwTypeEnumValues: VWType[]; // Prop to pass VWType enum values
-  initialData?: Partial<VideoFormData>; // For editing
+  vwTypeEnumValues: VWType[];
+  initialData?: Partial<VideoFormData>;
   onSubmit: (data: VideoFormData) => Promise<void>;
   isSubmitting: boolean;
 }
@@ -54,7 +53,7 @@ interface VideoFormProps {
 // Helper function to format VWType names for display
 const formatVWTypeName = (vwType: VWType): string => {
   if (!vwType) return "";
-  // Example: OFF_ROAD -> Off Road, TYPE3 -> Type 3
+
   return vwType
     .replace(/_/g, " ")
     .replace(/(\D)(\d)/g, "$1 $2") // Add space between non-digit and digit like TYPE3 -> TYPE 3
@@ -65,7 +64,7 @@ const formatVWTypeName = (vwType: VWType): string => {
 
 export default function VideoForm({
   categories,
-  vwTypeEnumValues, // Destructure the new prop
+  vwTypeEnumValues,
   initialData,
   onSubmit,
   isSubmitting,
@@ -79,7 +78,7 @@ export default function VideoForm({
           ...initialData,
           categoryIds: initialData.categoryIds || [],
           tags: initialData.tags || [],
-          vwTypes: initialData.vwTypes || [], // Initialize vwTypes
+          vwTypes: initialData.vwTypes || [],
         }
       : {
           platform: VideoPlatform.YOUTUBE,
@@ -91,7 +90,7 @@ export default function VideoForm({
           categoryIds: [],
           status: VideoStatus.DRAFT,
           tags: [],
-          vwTypes: [], // Initialize for new videos
+          vwTypes: [],
         },
   });
 
@@ -246,7 +245,7 @@ export default function VideoForm({
 
         <FormField
           control={form.control}
-          name="categoryIds" // Changed name to categoryIds
+          name="categoryIds"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Categories</FormLabel>
@@ -467,7 +466,7 @@ export default function VideoForm({
         {initialData?.transcript && (
           <FormField
             control={form.control}
-            name="transcript" // Name matches VideoFormData
+            name="transcript"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Transcript (Read-only)</FormLabel>
@@ -476,7 +475,7 @@ export default function VideoForm({
                     placeholder="Video transcript..."
                     className="resize-y min-h-[100px] max-h-[300px] bg-muted/50"
                     {...field}
-                    value={initialData.transcript || ""} // Ensure value is passed for read-only
+                    value={initialData.transcript || ""}
                     readOnly
                   />
                 </FormControl>

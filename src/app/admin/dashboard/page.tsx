@@ -1,4 +1,4 @@
-import { prisma } from "../../../lib/db"; // Adjust path if your src directory is elsewhere
+import { prisma } from "@/lib/db";
 
 export default async function AdminDashboardPage() {
   const videoCount = await prisma.video.count();
@@ -8,7 +8,6 @@ export default async function AdminDashboardPage() {
     <>
       <h1 className="text-2xl font-semibold text-foreground mb-6">Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Placeholder for stats cards */}
         <div className="bg-card p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold text-card-foreground">
             Total Videos
@@ -25,7 +24,6 @@ export default async function AdminDashboardPage() {
             {categoryCount}
           </p>
         </div>
-        {/* Add more stats cards or widgets here */}
       </div>
     </>
   );

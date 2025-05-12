@@ -9,3 +9,4 @@
 - Auth.js
 - Zod
 - React Hook Form
+- Lucide Icons

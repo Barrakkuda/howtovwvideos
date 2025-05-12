@@ -60,7 +60,6 @@ export const CategoryCellActions: React.FC<CategoryCellActionProps> = ({
   );
 };
 
-// Function to generate columns, taking handlers as arguments
 export const getCategoryColumns = (
   onEdit: (category: CategoryEntry) => void,
   onDelete: (category: CategoryEntry) => void,

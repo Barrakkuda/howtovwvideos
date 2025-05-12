@@ -23,12 +23,7 @@ export default async function YouTubeImportPage() {
       <BatchImportSection />
 
       {/* Manual Import Section */}
-      <div className="mt-12 p-6 border rounded-lg shadow-sm bg-card">
-        <h2 className="text-xl font-semibold mb-4 text-card-foreground">
-          Manual Video Import
-        </h2>
-        <YouTubeImportForm categories={categories} />
-      </div>
+      <YouTubeImportForm categories={categories} />
     </>
   );
 }

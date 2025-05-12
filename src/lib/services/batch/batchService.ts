@@ -68,7 +68,6 @@ export async function batchImportVideos(
             `Failed to create "${uncategorizedCategoryName}" category:`,
             e,
           );
-          // Optionally, you could decide to fail the whole batch or continue without it
         }
       }
     }
@@ -187,18 +186,18 @@ export async function batchImportVideos(
                     data: { name: name.trim() },
                   });
                 } catch (createError: unknown) {
-                  // More robust check for PrismaClientKnownRequestError properties
+                  // Check for PrismaClientKnownRequestError properties
                   if (
                     createError &&
                     typeof createError === "object" &&
                     "code" in createError &&
                     "meta" in createError
-                    // && (createError as any).code === "P2002" //  More specific check if needed and 'as any' is acceptable temp solution
                   ) {
                     const prismaError = createError as {
                       code: string;
                       meta?: { target?: string[] };
-                    }; // Type assertion
+                    };
+
                     if (
                       prismaError.code === "P2002" &&
                       prismaError.meta?.target?.includes("name")
@@ -249,7 +248,7 @@ export async function batchImportVideos(
 
           if (categoryIdsToLink.length > 0) {
             // Ensure categoriesSource is set if linking
-            if (!categoriesSource) categoriesSource = "batch-import-unknown"; // Should not happen if logic is correct
+            if (!categoriesSource) categoriesSource = "batch-import-unknown";
             videoCreateData.categories = {
               create: categoryIdsToLink.map((catId) => ({
                 category: { connect: { id: catId } },

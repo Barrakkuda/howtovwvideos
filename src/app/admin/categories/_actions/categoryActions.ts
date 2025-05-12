@@ -22,7 +22,7 @@ export async function addCategory(formData: CategoryFormData) {
     await prisma.category.create({
       data: {
         name,
-        description: description || null, // Ensure optional field is handled
+        description: description || null,
       },
     });
 
@@ -34,7 +34,6 @@ export async function addCategory(formData: CategoryFormData) {
   } catch (error) {
     let errorMessage = "Failed to create category.";
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // Updated to check target as an array for Prisma 5+
       if (
         error.code === "P2002" &&
         Array.isArray(error.meta?.target) &&

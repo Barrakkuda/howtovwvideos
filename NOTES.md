@@ -1,6 +1,0 @@
-- Setting up Prisma and connecting to your PostgreSQL database.
-- Creating the database schema for videos and categories.
-- Implementing authentication using Auth.js to protect the admin routes.
-- Building out the forms (using React Hook Form and Zod) for adding/editing videos and categories.
-- Fetching and displaying actual data from the database.
-- Integrating shadcn/ui components to enhance the UI.

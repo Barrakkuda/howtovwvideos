@@ -29,7 +29,7 @@ export async function fetchVideosForTable(): Promise<FetchVideosResponse> {
         createdAt: "desc",
       },
     });
-    return { success: true, data: videos as VideoForTable[] }; // Added type assertion
+    return { success: true, data: videos as VideoForTable[] };
   } catch (error) {
     console.error("Error fetching videos for table:", error);
     return {

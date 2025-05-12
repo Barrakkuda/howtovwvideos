@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Film, Tags, Youtube } from "lucide-react";
+import { LayoutDashboard, Film, Tags, SquarePlay } from "lucide-react";
 
 export default function AdminSidebar() {
   return (
@@ -39,11 +39,10 @@ export default function AdminSidebar() {
               href="/admin/youtube-import"
               className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
             >
-              <Youtube className="h-5 w-5" />
+              <SquarePlay className="h-5 w-5" />
               <span>Import YouTube</span>
             </Link>
           </li>
-          {/* Add more navigation links as needed */}
         </ul>
       </nav>
     </aside>

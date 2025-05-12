@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { VideoStatus, VideoPlatform, VWType } from "@generated/prisma"; // Added VideoPlatform and VWType
+import { VideoStatus, VideoPlatform, VWType } from "@generated/prisma";
 
 export const videoSchema = z.object({
-  platform: z.nativeEnum(VideoPlatform), // Added platform field
+  platform: z.nativeEnum(VideoPlatform),
   videoId: z.string().min(1, "Video ID is required"),
   title: z.string().min(3, "Title must be at least 3 characters long"),
   description: z.string().optional(),
@@ -10,27 +10,19 @@ export const videoSchema = z.object({
     .string()
     .url({ message: "Invalid URL format" })
     .optional()
-    .or(z.literal("")), // Made url optional as it can be derived
+    .or(z.literal("")),
   thumbnailUrl: z
     .string()
     .url({ message: "Invalid URL format" })
     .optional()
-    .or(z.literal("")), // Allow empty string to clear
+    .or(z.literal("")),
   categoryIds: z
     .array(z.coerce.number().int().positive())
     .min(1, { message: "Please select at least one category" }),
   status: z.nativeEnum(VideoStatus).optional(),
-  tags: z
-    .array(z.string()) // Each tag itself is a string
-    .optional()
-    .default([]), // Default to an empty array if not provided
-  vwTypes: z
-    .array(z.nativeEnum(VWType)) // Array of VWType enum values
-    .optional()
-    .default([]),
+  tags: z.array(z.string()).optional().default([]),
+  vwTypes: z.array(z.nativeEnum(VWType)).optional().default([]),
 });
-
-// export type VideoFormData = z.infer<typeof videoSchema>;
 
 // Manually define VideoFormData to include fields not in the schema for submission (like read-only transcript)
 export interface VideoFormData {
@@ -42,7 +34,7 @@ export interface VideoFormData {
   thumbnailUrl?: string;
   categoryIds: number[];
   status?: VideoStatus;
-  transcript?: string | null; // Added for displaying in form
-  tags?: string[]; // Added tags
-  vwTypes?: VWType[]; // Added vwTypes
+  transcript?: string | null;
+  tags?: string[];
+  vwTypes?: VWType[];
 }

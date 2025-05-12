@@ -20,7 +20,7 @@ interface CategoryFormProps {
   initialData?: Partial<CategoryFormData>;
   onSubmit: (data: CategoryFormData) => Promise<void>;
   isSubmitting: boolean;
-  onCancel?: () => void; // For closing the modal
+  onCancel?: () => void;
 }
 
 export default function CategoryForm({
@@ -72,7 +72,7 @@ export default function CategoryForm({
                   placeholder="A brief description of the category..."
                   className="resize-none"
                   {...field}
-                  value={field.value ?? ""} // Ensure value is never null for textarea
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormDescription>

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import NewVideoFormWrapper from "@/components/admin/NewVideoFormWrapper"; // We will create this
+import NewVideoFormWrapper from "@/components/admin/NewVideoFormWrapper";
 
 export default async function NewVideoPage() {
   const categories = await prisma.category.findMany({

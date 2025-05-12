@@ -4,7 +4,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,28 +26,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteVideo } from "./_actions/videoActions";
 
-// Define the shape of our video data, including the nested category
-// This should match the data structure you fetch from Prisma
 export type VideoEntry = {
-  id: number; // Or string, depending on your Prisma schema for Video.id
+  id: number;
   videoId: string | null;
   title: string;
   url: string | null;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "REJECTED"; // Added "REJECTED"
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
   categories: Array<{
-    // This represents an entry from the CategoriesOnVideos join table
     category: {
       id: number;
       name: string;
     };
-    // You can also include other fields from CategoriesOnVideos if needed, like assignedAt
   }>;
-  // Add any other fields you might display or use for actions
   createdAt: Date;
 };
 
 export const columns: ColumnDef<VideoEntry>[] = [
-  // Optional: If you want to display the internal ID and make it sortable
   {
     accessorKey: "id",
     header: ({ column }) => {

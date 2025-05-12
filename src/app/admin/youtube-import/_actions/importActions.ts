@@ -37,11 +37,11 @@ export interface ImportVideoResponse {
 export interface ImportYouTubeVideoPayload {
   videoData: YouTubeVideoItem;
   categoryId?: number; // For single, existing category selection
-  categories?: string[]; // Changed from suggestedCategoryNames
+  categories?: string[];
   isHowToVWVideo: boolean;
   sourceKeyword: string;
   channelTitle?: string;
-  openAIAnalysisData?: OpenAIAnalysisResponse; // To pass analysis results
+  openAIAnalysisData?: OpenAIAnalysisResponse;
 }
 
 // Helper function to map string to VWType enum value
@@ -119,18 +119,18 @@ export async function importYouTubeVideo(
     const videoCreateData: Prisma.VideoCreateInput = {
       platform: VideoPlatform.YOUTUBE,
       videoId: videoData.id,
-      title: videoData.title, // Always save title
+      title: videoData.title,
       isHowToVWVideo: isHowToVWVideo,
       sourceKeyword: sourceKeyword,
       processedAt: new Date(),
-      status: isHowToVWVideo ? VideoStatus.DRAFT : VideoStatus.REJECTED, // Set status based on isHowToVWVideo
+      status: isHowToVWVideo ? VideoStatus.DRAFT : VideoStatus.REJECTED,
       // Conditional fields based on isHowToVWVideo
       ...(isHowToVWVideo && {
         description: videoData.description || "",
         url: `https://www.youtube.com/watch?v=${videoData.id}`,
         thumbnailUrl: videoData.thumbnailUrl,
-        channelTitle: channelTitle, // From payload
-        transcript: transcriptText, // Fetched earlier in this function
+        channelTitle: channelTitle,
+        transcript: transcriptText,
       }),
     };
 
@@ -195,10 +195,6 @@ export async function importYouTubeVideo(
             assignedBy: "youtube-import-form",
           })),
         };
-      } else {
-        // If it's a HowToVWVideo but no valid categories could be linked (e.g., OpenAI suggested none, user selected none)
-        // This case might need specific handling based on business rules, for now, it won't link any.
-        // The form validation should ideally prevent this if categories are mandatory for HowToVWVideo.
       }
     }
 
@@ -206,7 +202,7 @@ export async function importYouTubeVideo(
     if (isHowToVWVideo && openAIAnalysisData) {
       if (openAIAnalysisData.vwTypes && openAIAnalysisData.vwTypes.length > 0) {
         const mappedVwTypes = openAIAnalysisData.vwTypes
-          .map(mapStringToVWType) // Use the helper function
+          .map(mapStringToVWType)
           .filter((type): type is VWType => type !== undefined);
         if (mappedVwTypes.length > 0) {
           videoCreateData.vwTypes = mappedVwTypes;
@@ -271,11 +267,10 @@ export async function searchYouTubeVideos(
   if (newVideos.length === 0 && serviceResponse.data.length > 0) {
     // All videos found were already in the DB
     return {
-      success: true, // Search itself was successful
-      data: [], // Return empty array
+      success: true,
+      data: [],
       error:
         "All videos found in the search results already exist in the database.",
-      // Consider if quotaExceeded should be handled or passed through. Assuming not for this specific case.
     };
   }
 
@@ -286,7 +281,7 @@ export async function searchYouTubeVideos(
 }
 
 // Wrapper for getting transcript service (for UI display)
-export async function getYouTubeTranscript( // Name kept same as what YouTubeImportForm expects
+export async function getYouTubeTranscript(
   videoId: string,
 ): Promise<{ success: boolean; transcript?: string; error?: string }> {
   return getTranscriptService(videoId);
@@ -315,7 +310,7 @@ export async function analyzeTranscriptWithOpenAI(
       transcript,
       existingCategoryNames,
       availableVWTypeNames,
-      videoTitle, // Pass videoTitle
+      videoTitle,
     );
   } catch (error) {
     console.error("Error preparing data for OpenAI analysis:", error);

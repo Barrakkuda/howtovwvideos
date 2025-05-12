@@ -1,15 +1,11 @@
 "use client";
 
 import { useState } from "react";
-// import { Category } from "@generated/prisma"; // Removed Category import
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-// Removed Select-related imports
 import { Loader2, PlayIcon } from "lucide-react";
 import { toast } from "sonner";
 
-// This will be the type for results from the batch import action
-// We can refine this later based on what batchImportVideos service returns
 export interface BatchActionResult {
   videoId: string;
   success: boolean;
@@ -17,11 +13,7 @@ export interface BatchActionResult {
   error?: string;
 }
 
-// interface BatchImportSectionProps { // Removed empty interface
-// }
-
-export default function BatchImportSection(/* Removed props annotation */) {
-  // Removed categories from destructuring
+export default function BatchImportSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [batchResults, setBatchResults] = useState<BatchActionResult[]>([]);
@@ -123,7 +115,7 @@ export default function BatchImportSection(/* Removed props annotation */) {
           <p className="mt-2 text-muted-foreground">
             Batch import in progress... This may take a while.
           </p>
-          {/* We could add more detailed progress here if the action can stream it */}
+          {/* More detailed progress can be added here if the action streams it */}
         </div>
       )}
 

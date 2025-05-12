@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-// import { prisma } from "@/lib/db"; // Cannot be used in client component directly
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { CategoryEntry, getCategoryColumns } from "./columns";
@@ -12,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  // DialogFooter, // Not used directly here, CategoryForm has its own
 } from "@/components/ui/dialog";
 import {
   AlertDialog,

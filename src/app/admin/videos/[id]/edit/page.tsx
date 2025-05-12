@@ -39,9 +39,6 @@ export default async function EditVideoPage({ params }: EditVideoPageProps) {
     },
   });
 
-  // The VideoStatus enum needs to be passed if it's used directly in the form component
-  // For now, VideoForm handles it internally based on initialData.status
-
   return (
     <>
       <h1 className="text-2xl font-semibold mb-6">

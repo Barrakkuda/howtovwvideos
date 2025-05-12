@@ -113,7 +113,7 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  // Add this effect to set the filter function for facet columns
+  // Effect to set the filter function for facet columns
   useEffect(() => {
     facetFilters.forEach((facet) => {
       const column = table.getColumn(facet.columnId);
@@ -137,9 +137,6 @@ export function DataTable<TData, TValue>({
         table.setColumnFilters(initialColumnFilters);
       }
     }
-    // Adding table.setColumnFilters to deps array if it's stable, otherwise `table` might be too broad.
-    // For now, `table` is okay, but if you see excessive re-runs, refine dependencies.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, initialColumnFilters, table]); // table.setColumnFilters can be added if stable
 
   return (

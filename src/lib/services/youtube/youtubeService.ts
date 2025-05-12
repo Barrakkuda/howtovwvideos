@@ -1,6 +1,5 @@
 import { YoutubeTranscript } from "youtube-transcript";
 
-// Types
 export interface YouTubeVideoItem {
   id: string;
   title: string;
@@ -146,7 +145,7 @@ export async function getYouTubeTranscript(
         const decodedTranscriptText = decodeHtmlEntities(rawTranscriptText);
         return { success: true, transcript: decodedTranscriptText };
       } else {
-        // This case means transcript was "found" but is empty. No need to retry usually.
+        // Transcript was "found" but is empty. No need to retry.
         return { success: false, error: "No transcript found or it is empty." };
       }
     } catch (error) {

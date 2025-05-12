@@ -9,7 +9,7 @@ declare global {
 export const prisma =
   global.prisma ||
   new PrismaClient({
-    // You can uncomment the following line if you want to see Prisma queries in your console during development
+    // See Prisma queries in the console in development mode
     // log: ['query', 'info', 'warn', 'error'],
   });
 
