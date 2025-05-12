@@ -30,6 +30,8 @@ interface YouTubeApiItem {
       default: { url: string };
       medium?: { url: string };
       high?: { url: string };
+      standard?: { url: string };
+      maxres?: { url: string };
     };
     channelTitle: string;
     publishedAt: string;
@@ -101,14 +103,27 @@ export async function searchYouTubeVideos(
     }
 
     const videos: YouTubeVideoItem[] = data.items.map(
-      (item: YouTubeApiItem) => ({
-        id: item.id.videoId,
-        title: decodeHtmlEntities(item.snippet.title),
-        description: decodeHtmlEntities(item.snippet.description),
-        thumbnailUrl: item.snippet.thumbnails.default.url,
-        channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
-        publishedAt: item.snippet.publishedAt,
-      }),
+      (item: YouTubeApiItem) => {
+        const thumbs = item.snippet.thumbnails;
+        let selectedThumbnailUrl = thumbs.default.url;
+
+        if (thumbs.standard?.url) {
+          selectedThumbnailUrl = thumbs.standard.url;
+        } else if (thumbs.high?.url) {
+          selectedThumbnailUrl = thumbs.high.url;
+        } else if (thumbs.medium?.url) {
+          selectedThumbnailUrl = thumbs.medium.url;
+        }
+
+        return {
+          id: item.id.videoId,
+          title: decodeHtmlEntities(item.snippet.title),
+          description: decodeHtmlEntities(item.snippet.description),
+          thumbnailUrl: selectedThumbnailUrl,
+          channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
+          publishedAt: item.snippet.publishedAt,
+        };
+      },
     );
 
     return { success: true, data: videos };

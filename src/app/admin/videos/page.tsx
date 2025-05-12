@@ -4,34 +4,30 @@ import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import Link from "next/link";
-import { columns, VideoEntry } from "./columns";
+import { columns } from "./columns";
 import { DataTable, DataTableFilterField } from "@/components/ui/data-table";
-import { fetchVideosForTable } from "./_actions/videoTableActions";
+import {
+  fetchVideosForTable,
+  VideoForTable,
+} from "./_actions/videoTableActions";
 import { toast } from "sonner";
-import { Category, VideoStatus } from "@generated/prisma";
+import { Category, VideoStatus, VWType } from "@generated/prisma";
 import { fetchAllCategories } from "../categories/_actions/categoryActions";
 import { ColumnDef, ColumnFiltersState } from "@tanstack/react-table";
+import { formatVideoStatus } from "@/lib/utils/formatters";
 
-// Helper to format VideoStatus enum for display
-const formatVideoStatus = (status: VideoStatus): string => {
-  switch (status) {
-    case VideoStatus.DRAFT:
-      return "Draft";
-    case VideoStatus.PUBLISHED:
-      return "Published";
-    case VideoStatus.ARCHIVED:
-      return "Archived";
-    case VideoStatus.REJECTED:
-      return "Rejected";
-    default:
-      const exhaustiveCheck: never = status;
-      console.warn(`Unknown VideoStatus encountered: ${exhaustiveCheck}`);
-      return status;
-  }
+// Helper to format VWType enum for display
+const formatVWType = (type: VWType): string => {
+  return String(type)
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 };
 
 export default function AdminVideosPage() {
-  const [videos, setVideos] = useState<VideoEntry[]>([]);
+  const [videos, setVideos] = useState<VideoForTable[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -51,7 +47,7 @@ export default function AdminVideosPage() {
       try {
         const videosData = await fetchVideosForTable();
         if (videosData.success && videosData.data) {
-          setVideos(videosData.data as VideoEntry[]);
+          setVideos(videosData.data);
         } else {
           setError(videosData.error || "Failed to fetch videos.");
           toast.error(videosData.error || "Failed to fetch videos.");
@@ -80,7 +76,7 @@ export default function AdminVideosPage() {
     loadData();
   }, []);
 
-  const facetFilters = useMemo((): DataTableFilterField<VideoEntry>[] => {
+  const facetFilters = useMemo((): DataTableFilterField<VideoForTable>[] => {
     const statusOptions = Object.values(VideoStatus).map((status) => ({
       label: formatVideoStatus(status),
       value: status,
@@ -89,6 +85,11 @@ export default function AdminVideosPage() {
     const categoryOptions = allCategories.map((cat) => ({
       label: cat.name,
       value: cat.id.toString(),
+    }));
+
+    const vwTypeOptions = Object.values(VWType).map((type) => ({
+      label: formatVWType(type),
+      value: type,
     }));
 
     return [
@@ -101,6 +102,11 @@ export default function AdminVideosPage() {
         columnId: "categories",
         title: "Category",
         options: categoryOptions,
+      },
+      {
+        columnId: "vwTypes",
+        title: "VW Type",
+        options: vwTypeOptions,
       },
     ];
   }, [allCategories]);
@@ -128,8 +134,8 @@ export default function AdminVideosPage() {
         </Button>
       </div>
 
-      <DataTable<VideoEntry, unknown>
-        columns={columns as ColumnDef<VideoEntry, unknown>[]}
+      <DataTable<VideoForTable, unknown>
+        columns={columns as ColumnDef<VideoForTable, unknown>[]}
         data={videos}
         filterColumnId="title"
         filterColumnPlaceholder="Filter by title..."

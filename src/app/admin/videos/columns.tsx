@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -26,22 +26,37 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteVideo } from "./_actions/videoActions";
 
-export type VideoEntry = {
-  id: number;
-  videoId: string | null;
-  title: string;
-  url: string | null;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
-  categories: Array<{
-    category: {
-      id: number;
-      name: string;
-    };
-  }>;
-  createdAt: Date;
-};
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { VideoForTable } from "./_actions/videoTableActions";
+import { Category, VWType } from "@generated/prisma";
+import { formatVideoStatus } from "@/lib/utils/formatters";
 
-export const columns: ColumnDef<VideoEntry>[] = [
+export const columns: ColumnDef<VideoForTable>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+        className="translate-y-[2px]"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+        className="translate-y-[2px]"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: "id",
     header: ({ column }) => {
@@ -55,10 +70,9 @@ export const columns: ColumnDef<VideoEntry>[] = [
         </Button>
       );
     },
-  },
-  {
-    accessorKey: "videoId",
-    header: "Platform ID",
+    cell: ({ row }) => <div className="w-[80px]">{row.getValue("id")}</div>,
+    enableSorting: true,
+    enableHiding: true,
   },
   {
     accessorKey: "title",
@@ -73,22 +87,76 @@ export const columns: ColumnDef<VideoEntry>[] = [
         </Button>
       );
     },
+    cell: ({ row }) => {
+      return (
+        <div className="flex space-x-2">
+          <span className="max-w-[400px] truncate font-medium">
+            <Link
+              href={`/admin/videos/${row.original.id}/edit`}
+              className="hover:underline"
+            >
+              {row.getValue("title")}
+            </Link>
+          </span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "categories",
     header: "Categories",
-    enableColumnFilter: true,
-    filterFn: "arrIncludesSome",
     cell: ({ row }) => {
-      const categoriesOnVideo = row.original.categories;
-      if (!categoriesOnVideo || categoriesOnVideo.length === 0) {
-        return <span className="text-xs text-muted-foreground">N/A</span>;
+      const categories = row.original.categories;
+      if (!categories || categories.length === 0) {
+        return (
+          <span className="text-neutral-500 dark:text-neutral-400">N/A</span>
+        );
       }
-      const categoryNames = categoriesOnVideo
-        .map((cov) => cov.category.name)
-        .join(", ");
-      return <span className="text-xs">{categoryNames}</span>;
+      return (
+        <div className="flex flex-wrap gap-1">
+          {categories.map(({ category }: { category: Category }) => (
+            <Badge
+              key={category.id}
+              variant="secondary"
+              className="whitespace-nowrap"
+            >
+              {category.name}
+            </Badge>
+          ))}
+        </div>
+      );
     },
+    filterFn: "arrIncludesSome",
+    enableSorting: false,
+  },
+  {
+    accessorKey: "vwTypes",
+    header: "VW Type(s)",
+    cell: ({ row }) => {
+      const vwTypes = row.original.vwTypes as VWType[] | undefined;
+      if (!vwTypes || vwTypes.length === 0) {
+        return (
+          <span className="text-neutral-500 dark:text-neutral-400">N/A</span>
+        );
+      }
+      return (
+        <div className="flex flex-wrap gap-1">
+          {vwTypes.map((type: VWType) => (
+            <Badge key={type} variant="outline" className="whitespace-nowrap">
+              {String(type)
+                .toLowerCase()
+                .replace(/_/g, " ")
+                .split(" ")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ")}
+            </Badge>
+          ))}
+        </div>
+      );
+    },
+    filterFn: "arrIncludesSome",
+    enableSorting: false,
+    enableHiding: true,
   },
   {
     accessorKey: "status",
@@ -104,51 +172,11 @@ export const columns: ColumnDef<VideoEntry>[] = [
       );
     },
     cell: ({ row }) => {
-      const status = row.getValue("status") as VideoEntry["status"];
-      let statusClass = "";
-      switch (status) {
-        case "PUBLISHED":
-          statusClass =
-            "bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100";
-          break;
-        case "DRAFT":
-          statusClass =
-            "bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100";
-          break;
-        case "ARCHIVED":
-          statusClass =
-            "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100";
-          break;
-        case "REJECTED":
-          statusClass =
-            "bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100";
-          break;
-        default:
-          statusClass = "bg-gray-200 text-gray-700";
-      }
+      const status = row.original.status;
       return (
-        <span
-          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`}
-        >
-          {status}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: "url",
-    header: "URL",
-    cell: ({ row }) => {
-      const url = row.getValue("url") as string;
-      return (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-200"
-        >
-          Link
-        </a>
+        <Badge variant={status === "PUBLISHED" ? "default" : "secondary"}>
+          {formatVideoStatus(status)}
+        </Badge>
       );
     },
   },
@@ -167,7 +195,7 @@ export const columns: ColumnDef<VideoEntry>[] = [
     },
     cell: ({ row }) => {
       const date = new Date(row.getValue("createdAt"));
-      return <div className="text-sm">{date.toLocaleDateString()}</div>;
+      return <span>{date.toLocaleDateString()}</span>;
     },
   },
   {
@@ -211,7 +239,7 @@ export const columns: ColumnDef<VideoEntry>[] = [
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={async () => {
-                  const result = await deleteVideo(video.id);
+                  const result = await deleteVideo(video.id as number);
                   if (result.success) {
                     toast.success(result.message);
                   } else {

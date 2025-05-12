@@ -1,7 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { Video, Category, CategoriesOnVideos } from "@generated/prisma";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Video, Category, CategoriesOnVideos, VWType } from "@generated/prisma";
 
 export interface VideoForTable extends Video {
   categories: (CategoriesOnVideos & {
