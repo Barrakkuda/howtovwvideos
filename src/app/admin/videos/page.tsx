@@ -137,10 +137,10 @@ export default function AdminVideosPage() {
       <DataTable<VideoForTable, unknown>
         columns={columns as ColumnDef<VideoForTable, unknown>[]}
         data={videos}
-        filterColumnId="title"
-        filterColumnPlaceholder="Filter by title..."
+        filterColumnPlaceholder="Search in title and video ID..."
         facetFilters={facetFilters}
         initialColumnFilters={initialVideoTableFilters}
+        searchableColumns={["title", "videoId"]}
       />
     </>
   );

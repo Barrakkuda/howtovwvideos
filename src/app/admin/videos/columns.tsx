@@ -75,6 +75,25 @@ export const columns: ColumnDef<VideoForTable>[] = [
     enableHiding: true,
   },
   {
+    accessorKey: "videoId",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Platform Video ID
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => (
+      <div className="w-[120px] font-mono">{row.getValue("videoId")}</div>
+    ),
+    enableSorting: true,
+    enableHiding: true,
+  },
+  {
     accessorKey: "title",
     header: ({ column }) => {
       return (

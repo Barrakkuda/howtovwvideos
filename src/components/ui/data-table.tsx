@@ -42,6 +42,7 @@ interface DataTableProps<TData, TValue> {
   filterColumnPlaceholder?: string;
   facetFilters?: DataTableFilterField<TData>[];
   initialColumnFilters?: ColumnFiltersState;
+  searchableColumns?: string[];
 }
 
 export interface FacetFilterOption {
@@ -63,11 +64,13 @@ export function DataTable<TData, TValue>({
   filterColumnPlaceholder = "Filter...",
   facetFilters = [],
   initialColumnFilters,
+  searchableColumns = [],
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const table = useReactTable<TData>({
     data,
@@ -80,6 +83,41 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, columnId, filterValue) => {
+      const searchTerm = String(filterValue).toLowerCase();
+
+      // If no searchable columns specified, search all columns
+      const columnsToSearch =
+        searchableColumns.length > 0
+          ? searchableColumns
+          : columns
+              .map((col) => ("id" in col ? col.id : null))
+              .filter((id): id is string => id !== null);
+
+      return columnsToSearch.some((columnId) => {
+        const value = row.getValue(columnId);
+        if (value == null) return false;
+
+        if (typeof value === "string") {
+          return value.toLowerCase().includes(searchTerm);
+        }
+        if (typeof value === "number") {
+          return String(value).includes(searchTerm);
+        }
+        if (Array.isArray(value)) {
+          return value.some((v) => {
+            if (typeof v === "object" && v !== null) {
+              return Object.values(v).some((val) =>
+                String(val).toLowerCase().includes(searchTerm),
+              );
+            }
+            return String(v).toLowerCase().includes(searchTerm);
+          });
+        }
+        return String(value).toLowerCase().includes(searchTerm);
+      });
+    },
     initialState: {
       pagination: {
         pageSize: 100,
@@ -90,6 +128,7 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
+      globalFilter,
     },
     filterFns: {
       arrIncludesSome: (row, columnId, filterValue: (string | number)[]) => {
@@ -143,6 +182,14 @@ export function DataTable<TData, TValue>({
     <div>
       {/* Filter and Column Toggle */}
       <div className="flex items-center py-4">
+        {/* Global Search Input */}
+        <Input
+          placeholder={filterColumnPlaceholder}
+          value={globalFilter}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm"
+        />
+
         {filterColumnId && (
           <Input
             placeholder={filterColumnPlaceholder}
@@ -319,30 +366,6 @@ export function DataTable<TData, TValue>({
             Next
           </Button>
         </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
       </div>
     </div>
   );
