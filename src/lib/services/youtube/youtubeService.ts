@@ -75,18 +75,14 @@ export async function searchYouTubeVideos(
     type: "video",
   });
   params.append("maxResults", maxResults.toString());
-  // Optionally, add other parameters like 'pageToken' if implementing pagination
 
   const fetchUrl = `${YOUTUBE_API_URL}?${params.toString()}`;
-  // console.log(`Fetching from YouTube API: ${fetchUrl}`); // Log the full URL -- REMOVED
 
   try {
     const response = await fetch(fetchUrl);
     const data = await response.json();
-    // console.log("Raw YouTube API Response Data:", JSON.stringify(data, null, 2)); // Log the raw data object -- REMOVED
 
     if (!response.ok) {
-      // console.error("YouTube API Error (raw data logged above):", data.error?.message || data); -- Keep this error log for actual errors
       console.error("YouTube API Error:", data.error?.message || data);
       const errorMessage =
         data.error?.message ||
@@ -101,9 +97,6 @@ export async function searchYouTubeVideos(
       };
     }
 
-    // console.log(
-    //   `YouTube API returned ${data.items ? data.items.length : 0} items for query: ${query}`,
-    // ); // -- REMOVED
     if (!data.items || data.items.length === 0) {
       return { success: true, data: [] };
     }
@@ -139,32 +132,55 @@ export async function getYouTubeTranscript(
     return { success: false, error: "Video ID is required." };
   }
 
-  try {
-    const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoId);
-    if (transcriptResponse && transcriptResponse.length > 0) {
-      const rawTranscriptText = transcriptResponse
-        .map((line) => line.text)
-        .join(" ");
-      const decodedTranscriptText = decodeHtmlEntities(rawTranscriptText);
-      return { success: true, transcript: decodedTranscriptText };
-    } else {
-      return { success: false, error: "No transcript found or it is empty." };
-    }
-  } catch (error) {
-    console.warn(`Could not fetch transcript for video ID ${videoId}:`, error);
-    let errorMessage = "Failed to fetch transcript.";
-    if (
-      error instanceof Error &&
-      error.message.includes("disabled transcripts")
-    ) {
-      errorMessage = "Transcripts are disabled for this video.";
-    } else if (
-      error instanceof Error &&
-      error.message.includes("no transcripts are available")
-    ) {
-      errorMessage = "No transcripts are available for this video.";
-    }
+  let retries = 3;
+  let lastError: unknown = null;
 
-    return { success: false, error: errorMessage };
+  while (retries > 0) {
+    try {
+      const transcriptResponse =
+        await YoutubeTranscript.fetchTranscript(videoId);
+      if (transcriptResponse && transcriptResponse.length > 0) {
+        const rawTranscriptText = transcriptResponse
+          .map((line) => line.text)
+          .join(" ");
+        const decodedTranscriptText = decodeHtmlEntities(rawTranscriptText);
+        return { success: true, transcript: decodedTranscriptText };
+      } else {
+        // This case means transcript was "found" but is empty. No need to retry usually.
+        return { success: false, error: "No transcript found or it is empty." };
+      }
+    } catch (error) {
+      lastError = error;
+      retries--;
+      console.warn(
+        `Attempt to fetch transcript for video ID ${videoId} failed. Retries left: ${retries}`,
+        error,
+      );
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+      } else {
+        // All retries failed, proceed to the main error handling below
+        break;
+      }
+    }
   }
+
+  // If loop finishes due to retries exhausted, lastError will be set
+  // The original catch block will handle formatting this error
+  console.error(
+    `All attempts to fetch transcript for video ID ${videoId} failed. Last error:`,
+    lastError,
+  );
+  let errorMessage = "Failed to fetch transcript after multiple attempts.";
+  if (lastError instanceof Error) {
+    if (lastError.message.includes("disabled transcripts")) {
+      errorMessage = "Transcripts are disabled for this video.";
+    } else if (lastError.message.includes("no transcripts are available")) {
+      errorMessage = "No transcripts are available for this video.";
+    } else {
+      errorMessage = `Failed to fetch transcript: ${lastError.message}`;
+    }
+  }
+
+  return { success: false, error: errorMessage };
 }

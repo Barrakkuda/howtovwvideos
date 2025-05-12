@@ -15,6 +15,10 @@ import {
   analyzeTranscriptWithOpenAI as analyzeTranscriptService,
   OpenAIAnalysisResponse,
 } from "@/lib/services/openai/openaiService";
+import {
+  batchImportVideos as batchImportService,
+  BatchImportResult,
+} from "@/lib/services/batch/batchService";
 
 // Re-export types needed by client components that use these actions
 export type {
@@ -289,8 +293,10 @@ export async function getYouTubeTranscript( // Name kept same as what YouTubeImp
 }
 
 // Wrapper for OpenAI analysis service (for UI display)
-export async function analyzeTranscriptWithOpenAI(transcript: string): Promise<{
-  // Name kept same as what YouTubeImportForm expects
+export async function analyzeTranscriptWithOpenAI(
+  transcript: string,
+  videoTitle: string,
+): Promise<{
   success: boolean;
   data?: OpenAIAnalysisResponse;
   error?: string;
@@ -309,6 +315,7 @@ export async function analyzeTranscriptWithOpenAI(transcript: string): Promise<{
       transcript,
       existingCategoryNames,
       availableVWTypeNames,
+      videoTitle, // Pass videoTitle
     );
   } catch (error) {
     console.error("Error preparing data for OpenAI analysis:", error);
@@ -317,5 +324,37 @@ export async function analyzeTranscriptWithOpenAI(transcript: string): Promise<{
         ? error.message
         : "An unexpected error occurred while fetching data for OpenAI.";
     return { success: false, error: errorMessage };
+  }
+}
+
+// --- Batch Import Action ---
+
+export async function batchImportYouTubeVideosAction(
+  searchQuery: string,
+  maxVideos?: number,
+): Promise<BatchImportResult[]> {
+  try {
+    console.log(
+      `Starting batch import action with query: "${searchQuery}", maxVideos: ${maxVideos || "default"}`,
+    );
+    const results = await batchImportService({
+      searchQuery,
+      ...(maxVideos && { maxVideos }),
+    });
+    return results;
+  } catch (error) {
+    console.error("Error during batch import action:", error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred during batch import.";
+    return [
+      {
+        videoId: "batch-action-error",
+        success: false,
+        message: "Batch import action failed.",
+        error: errorMessage,
+      },
+    ];
   }
 }

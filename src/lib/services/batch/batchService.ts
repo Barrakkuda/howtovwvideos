@@ -27,20 +27,55 @@ export interface BatchImportResult {
 
 export interface BatchImportOptions {
   maxVideos?: number;
-  categoryId: number;
   searchQuery: string;
 }
 
 export async function batchImportVideos(
   options: BatchImportOptions,
 ): Promise<BatchImportResult[]> {
-  const {
-    maxVideos = 100,
-    /* categoryId (will be used as fallback or if OpenAI gives no categories) */ searchQuery,
-  } = options;
+  const { maxVideos = 30, searchQuery } = options;
   const results: BatchImportResult[] = [];
+  let uncategorizedCategoryId: number | null = null;
 
   try {
+    // Find or create the "Uncategorized" category once
+    const uncategorizedCategoryName = "Uncategorized";
+    let uncategorizedCat = await prisma.category.findUnique({
+      where: { name: uncategorizedCategoryName },
+    });
+    if (!uncategorizedCat) {
+      try {
+        uncategorizedCat = await prisma.category.create({
+          data: {
+            name: uncategorizedCategoryName,
+            description: "Videos that could not be automatically categorized.",
+          },
+        });
+        console.log(
+          `Created "${uncategorizedCategoryName}" category with ID: ${uncategorizedCat.id}`,
+        );
+      } catch (e) {
+        // Handle potential race condition if another process creates it simultaneously
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === "P2002"
+        ) {
+          uncategorizedCat = await prisma.category.findUnique({
+            where: { name: uncategorizedCategoryName },
+          });
+        } else {
+          console.error(
+            `Failed to create "${uncategorizedCategoryName}" category:`,
+            e,
+          );
+          // Optionally, you could decide to fail the whole batch or continue without it
+        }
+      }
+    }
+    if (uncategorizedCat) {
+      uncategorizedCategoryId = uncategorizedCat.id;
+    }
+
     // Fetch existing category names and VWType names once before the loop
     const categoriesFromDb = await prisma.category.findMany({
       select: { name: true },
@@ -93,6 +128,7 @@ export async function batchImportVideos(
             transcriptText,
             existingCategoryNames,
             availableVWTypeNames,
+            video.title,
           );
           if (analysisResult.success && analysisResult.data) {
             openAIAnalysis = analysisResult.data;
@@ -202,21 +238,18 @@ export async function batchImportVideos(
                 categoryIdsToLink.push(category.id);
               }
             }
-          } else if (options.categoryId) {
-            const catExists = await prisma.category.findUnique({
-              where: { id: options.categoryId },
-            });
-            if (catExists) {
-              categoryIdsToLink.push(options.categoryId);
-              categoriesSource = "batch-import-manual-option";
-            } else {
-              console.warn(
-                `Category ID ${options.categoryId} from batch options not found.`,
-              );
-            }
+          } else if (uncategorizedCategoryId) {
+            // Fallback to Uncategorized
+            categoryIdsToLink.push(uncategorizedCategoryId);
+            categoriesSource = "batch-import-uncategorized-fallback";
+            console.log(
+              `Video ${video.id} (${video.title}) had no OpenAI categories, assigning to "Uncategorized".`,
+            );
           }
 
-          if (categoryIdsToLink.length > 0 && categoriesSource) {
+          if (categoryIdsToLink.length > 0) {
+            // Ensure categoriesSource is set if linking
+            if (!categoriesSource) categoriesSource = "batch-import-unknown"; // Should not happen if logic is correct
             videoCreateData.categories = {
               create: categoryIdsToLink.map((catId) => ({
                 category: { connect: { id: catId } },

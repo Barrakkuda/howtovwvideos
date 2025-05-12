@@ -284,7 +284,7 @@ export default function YouTubeImportForm({
     }
   };
 
-  const handleOpenAIAnalysis = async (videoId: string) => {
+  const handleOpenAIAnalysis = async (videoId: string, title: string) => {
     const transcriptData = displayedTranscripts[videoId];
     if (!transcriptData?.transcript) {
       toast.error("Please fetch the transcript first.");
@@ -299,6 +299,7 @@ export default function YouTubeImportForm({
     try {
       const result = await analyzeTranscriptWithOpenAI(
         transcriptData.transcript,
+        title,
       );
       if (result.success) {
         setOpenaiAnalysis((prev) => ({
@@ -355,7 +356,7 @@ export default function YouTubeImportForm({
       <form onSubmit={handleSearch} className="flex items-center gap-2">
         <Input
           type="search"
-          placeholder="Search YouTube for videos..."
+          placeholder="Search term"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-grow"
@@ -409,13 +410,21 @@ export default function YouTubeImportForm({
                   key={video.id}
                   className="flex flex-col sm:flex-row items-start gap-4 p-3 border rounded-md bg-card"
                 >
-                  <Image
-                    src={video.thumbnailUrl}
-                    alt={video.title}
-                    width={120}
-                    height={90}
-                    className="w-full sm:w-32 rounded-sm object-cover aspect-video sm:aspect-auto"
-                  />
+                  <a
+                    href={`https://www.youtube.com/watch?v=${video.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Watch "${video.title}" on YouTube`}
+                    className="block w-full sm:w-32 aspect-video sm:aspect-auto rounded-sm overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                  >
+                    <Image
+                      src={video.thumbnailUrl}
+                      alt={video.title}
+                      width={120}
+                      height={90}
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    />
+                  </a>
                   <div className="flex-1 space-y-2">
                     <h3 className="font-semibold text-card-foreground">
                       {video.title}
@@ -439,7 +448,9 @@ export default function YouTubeImportForm({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleOpenAIAnalysis(video.id)}
+                        onClick={() =>
+                          handleOpenAIAnalysis(video.id, video.title)
+                        }
                         disabled={
                           !transcriptStatus?.transcript ||
                           analysisStatus?.fetching ||
@@ -574,11 +585,6 @@ export default function YouTubeImportForm({
         <p className="text-muted-foreground">
           No results found for &quot;{searchQuery}&quot;. Searched videos will
           appear here.
-        </p>
-      )}
-      {!isLoading && !error && results.length === 0 && !searchQuery && (
-        <p className="text-muted-foreground">
-          Enter a search term to find YouTube videos.
         </p>
       )}
     </div>

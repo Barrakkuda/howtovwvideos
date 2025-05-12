@@ -1,5 +1,6 @@
 import YouTubeImportForm from "@/components/admin/YouTubeImportForm";
 import { prisma } from "@/lib/db";
+import BatchImportSection from "@/components/admin/BatchImportSection";
 
 export const metadata = {
   title: "Import YouTube Videos",
@@ -17,12 +18,17 @@ export default async function YouTubeImportPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Import Videos from YouTube</h1>
       </div>
-      {/* 
-        We will fetch the API key on the server and pass it to the client component,
-        or the server action will use it directly.
-        For now, the form will just handle UI and call the action.
-      */}
-      <YouTubeImportForm categories={categories} />
+
+      {/* Batch Import Section */}
+      <BatchImportSection />
+
+      {/* Manual Import Section */}
+      <div className="mt-12 p-6 border rounded-lg shadow-sm bg-card">
+        <h2 className="text-xl font-semibold mb-4 text-card-foreground">
+          Manual Video Import
+        </h2>
+        <YouTubeImportForm categories={categories} />
+      </div>
     </>
   );
 }

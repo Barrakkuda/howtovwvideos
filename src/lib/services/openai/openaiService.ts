@@ -15,6 +15,7 @@ export async function analyzeTranscriptWithOpenAI(
   transcript: string,
   existingCategoryNames: string[],
   availableVWTypeNames: string[],
+  videoTitle: string,
 ): Promise<{
   success: boolean;
   data?: OpenAIAnalysisResponse;
@@ -35,26 +36,38 @@ export async function analyzeTranscriptWithOpenAI(
   const vwTypesString = availableVWTypeNames.join(", ");
   const categoriesString = existingCategoryNames.join(", ");
 
-  const prompt = `Analyze the following video transcript.
+  const prompt = `You are an expert in vintage air-cooled Volkswagen vehicles, including Beetles, Buses, Ghias, and related models. You are helping to classify YouTube videos that may be educational or instructional ("how-to") content specifically about working on these types of vehicles.
 
-First, determine if this is a how-to video specifically about vintage air-cooled Volkswagen vehicles.
-If it is NOT a how-to video about vintage air-cooled Volkswagens, respond with:
+Your job is to analyze the provided video title and transcript, then decide if the video is a how-to video about vintage air-cooled Volkswagens. If so, classify the vehicle types, relevant topic categories, and provide up to 5 specific tags.
+
+Use the following decision logic:
+
+1. The video **must** be instructional or demonstrative in nature (not purely opinion, entertainment, or historical overview). The title might provide clues.
+2. The video **must clearly relate to** vintage air-cooled Volkswagen vehicles. If the car brand or engine type is not clearly stated or clearly implied from title or transcript, assume it is not VW.
+3. If the video qualifies, classify it accordingly using the format below.
+4. If the video does not qualify, return the rejection format exactly.
+
+Allowed "vwTypes": [${vwTypesString}]
+Allowed "categories": [${categoriesString}]
+Tags: Max 5. Short (1-3 words), specific, not generic labels.
+
+Respond in **exact JSON format**.
+
+If the video **does not** qualify:
 { "isHowToVWVideo": false }
 
-If it IS a how-to video about vintage air-cooled Volkswagens, please provide a JSON object with the following structure:
+If the video does qualify:
 {
   "isHowToVWVideo": true,
-  "vwTypes": ["<SUGGESTED_VW_TYPE_1>", "<SUGGESTED_VW_TYPE_2>", ...],
-  "categories": ["<SUGGESTED_CATEGORY_1>", "<SUGGESTED_CATEGORY_2>", ...],
+  "vwTypes": ["<SUGGESTED_VW_TYPE_1>", "<SUGGESTED_VW_TYPE_2>"],
+  "categories": ["<CATEGORY_1>", "<CATEGORY_2>"],
   "tags": ["<TAG_1>", "<TAG_2>", "<TAG_3>", "<TAG_4>", "<TAG_5>"]
 }
 
-Instructions for when "isHowToVWVideo" is true:
-1.  "vwTypes": Select one or more relevant VW types from the following list: [${vwTypesString}]. The "ALL" type can be used if the content is broadly applicable.
-2.  "categories": Select one or more relevant categories from the following list of existing categories: [${categoriesString}].
-3.  "tags": Suggest up to 5 concise, relevant tags (1-3 words each) based on the specific topics and keywords in the transcript. These should be new, specific keywords, not necessarily from the provided category list.
+Video Title: "${videoTitle}"
+Video Transcript: "${transcript}"`;
 
-Transcript: "${transcript}"`;
+  // console.log("Sending the following prompt to OpenAI:\n", prompt);
 
   try {
     const completion = await openai.chat.completions.create({
