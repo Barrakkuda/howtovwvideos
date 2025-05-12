@@ -57,7 +57,7 @@ export const columns: ColumnDef<VideoEntry>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          DB ID
+          ID
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -82,8 +82,10 @@ export const columns: ColumnDef<VideoEntry>[] = [
     },
   },
   {
-    accessorKey: "categories", // Changed from category.name
-    header: "Categories", // Changed header to plural
+    accessorKey: "categories",
+    header: "Categories",
+    enableColumnFilter: true,
+    filterFn: "arrIncludesSome",
     cell: ({ row }) => {
       const categoriesOnVideo = row.original.categories;
       if (!categoriesOnVideo || categoriesOnVideo.length === 0) {

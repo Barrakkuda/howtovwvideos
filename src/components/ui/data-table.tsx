@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -38,8 +38,22 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  filterColumnId?: string; // ID of the column to filter by (e.g., 'title', 'email')
-  filterColumnPlaceholder?: string; // Placeholder for the filter input
+  filterColumnId?: string;
+  filterColumnPlaceholder?: string;
+  facetFilters?: DataTableFilterField<TData>[];
+  initialColumnFilters?: ColumnFiltersState;
+}
+
+export interface FacetFilterOption {
+  label: string;
+  value: string | number;
+  icon?: React.ComponentType<{ className?: string }>;
+}
+
+export interface DataTableFilterField<TData> {
+  columnId: Extract<keyof TData, string>;
+  title: string;
+  options: FacetFilterOption[];
 }
 
 export function DataTable<TData, TValue>({
@@ -47,14 +61,13 @@ export function DataTable<TData, TValue>({
   data,
   filterColumnId,
   filterColumnPlaceholder = "Filter...",
+  facetFilters = [],
+  initialColumnFilters,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable<TData>({
     data,
@@ -78,7 +91,56 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
     },
+    filterFns: {
+      arrIncludesSome: (row, columnId, filterValue: (string | number)[]) => {
+        const value = row.getValue(columnId);
+
+        if (!filterValue?.length) return true;
+
+        // Special handling for categories
+        if (columnId === "categories") {
+          const categories = value as { category: { id: number } }[];
+          const categoryIds = categories.map((cat) => String(cat.category.id));
+          return categoryIds.some((id) => filterValue.includes(id));
+        }
+
+        // Default handling for other columns
+        if (Array.isArray(value)) {
+          return value.some((v) => filterValue.includes(String(v)));
+        }
+        return filterValue.includes(String(value));
+      },
+    },
   });
+
+  // Add this effect to set the filter function for facet columns
+  useEffect(() => {
+    facetFilters.forEach((facet) => {
+      const column = table.getColumn(facet.columnId);
+      if (column) {
+        column.columnDef.filterFn = "arrIncludesSome";
+      }
+    });
+  }, [facetFilters, table]);
+
+  // Effect to set initial column filters once data is available
+  useEffect(() => {
+    // Check if data is loaded, initialColumnFilters are provided, and no filters are currently set
+    if (
+      data &&
+      data.length > 0 &&
+      initialColumnFilters &&
+      initialColumnFilters.length > 0
+    ) {
+      const currentTableFilters = table.getState().columnFilters;
+      if (currentTableFilters.length === 0) {
+        table.setColumnFilters(initialColumnFilters);
+      }
+    }
+    // Adding table.setColumnFilters to deps array if it's stable, otherwise `table` might be too broad.
+    // For now, `table` is okay, but if you see excessive re-runs, refine dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, initialColumnFilters, table]); // table.setColumnFilters can be added if stable
 
   return (
     <div>
@@ -99,6 +161,42 @@ export function DataTable<TData, TValue>({
             className="max-w-sm"
           />
         )}
+        {facetFilters.map((facet) => (
+          <DropdownMenu key={facet.columnId}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-2">
+                {facet.title}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {facet.options.map((option) => {
+                const currentValue =
+                  (table.getColumn(facet.columnId)?.getFilterValue() as (
+                    | string
+                    | number
+                  )[]) || [];
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={option.value.toString()}
+                    checked={currentValue.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      const newValue = checked
+                        ? [...currentValue, option.value]
+                        : currentValue.filter((v) => v !== option.value);
+                      table
+                        .getColumn(facet.columnId)
+                        ?.setFilterValue(
+                          newValue.length ? newValue : undefined,
+                        );
+                    }}
+                  >
+                    {option.label}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ))}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -224,6 +322,30 @@ export function DataTable<TData, TValue>({
             Next
           </Button>
         </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );

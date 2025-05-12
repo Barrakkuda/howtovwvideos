@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { categorySchema, CategoryFormData } from "@/lib/validators/category";
-import { Prisma } from "@generated/prisma";
+import { Prisma, Category } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function addCategory(formData: CategoryFormData) {
@@ -140,5 +140,25 @@ export async function deleteCategory(id: number) {
       success: false,
       message: errorMessage,
     };
+  }
+}
+
+export async function fetchAllCategories(): Promise<{
+  success: boolean;
+  data?: Category[];
+  error?: string;
+}> {
+  try {
+    const categories = await prisma.category.findMany({
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return { success: true, data: categories };
+  } catch (error) {
+    console.error("Error fetching all categories:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to fetch categories";
+    return { success: false, error: errorMessage };
   }
 }
