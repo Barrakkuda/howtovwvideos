@@ -50,6 +50,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   XIcon,
+  RotateCcw,
 } from "lucide-react";
 import {
   Select,
@@ -367,7 +368,7 @@ export function DataTable<TData, TValue>({
       clientSideInitialState.pagination ?? { pageIndex: 0, pageSize: 10 },
     );
     setColumnVisibility(clientSideInitialState.columnVisibility ?? {});
-  }, [getInitialState]); // Dependency ensures this runs if localStorageKey/searchParams change
+  }, [getInitialState]);
 
   // --- TanStack Table Instance ---
   const table = useReactTable<TData>({
@@ -404,6 +405,21 @@ export function DataTable<TData, TValue>({
     // globalFilterFn: 'auto', // Use default global filter (searches all columns) or provide a custom one if needed
     // enableGlobalFilter: true, // Ensure global filtering is enabled
   });
+
+  const handleReset = () => {
+    // Clear all table state
+    setSorting([]);
+    setColumnFilters(initialColumnFilters);
+    setPagination({ pageIndex: 0, pageSize: 10 });
+    setColumnVisibility({});
+    setGlobalFilter("");
+    setRowSelection({});
+
+    // Clear localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(localStorageKey);
+    }
+  };
 
   // --- Render Logic ---
   // Render null or a loader until mounted to avoid hydration errors
@@ -517,6 +533,17 @@ export function DataTable<TData, TValue>({
             </DropdownMenu>
           );
         })}
+
+        {/* Reset Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          onClick={handleReset}
+        >
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Reset
+        </Button>
 
         {/* Column Visibility Toggle */}
         <DropdownMenu>
