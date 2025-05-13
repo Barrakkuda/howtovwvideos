@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table";
 import { Category } from "@generated/prisma";
 import { ArrowUpDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Define a type for the data expected by the table
 export type CategoryEntry = Pick<
   Category,
   "id" | "name" | "description" | "createdAt" | "updatedAt"
 >;
 
-// Props for the cell actions, including handlers
 interface CategoryCellActionProps {
-  row: { original: CategoryEntry };
+  row: Row<CategoryEntry>;
   onEdit: (category: CategoryEntry) => void;
   onDelete: (category: CategoryEntry) => void;
 }
@@ -66,37 +64,37 @@ export const getCategoryColumns = (
 ): ColumnDef<CategoryEntry>[] => [
   {
     accessorKey: "id",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          ID
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        ID
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="pl-4 font-mono text-xs">{row.getValue("id")}</div>
     ),
+    enableGlobalFilter: false,
   },
   {
     accessorKey: "name",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => (
-      <div className="font-medium text-base pl-2">{row.getValue("name")}</div>
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Name
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
     ),
+    cell: ({ row }) => (
+      <div className="font-medium text-base pl-2">
+        {row.getValue("name") as string}
+      </div>
+    ),
+    enableGlobalFilter: true,
   },
   {
     accessorKey: "description",
@@ -111,31 +109,38 @@ export const getCategoryColumns = (
         <span className="text-xs text-muted-foreground italic">None</span>
       );
     },
+    enableGlobalFilter: true,
   },
   {
     accessorKey: "createdAt",
-    header: ({ column }) => {
+    header: ({ column }) => (
+      <div className="text-right">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Created At
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const createdAt = row.getValue("createdAt") as string | Date;
+      const date = new Date(createdAt);
+      const formatted = isNaN(date.getTime())
+        ? "-"
+        : date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
       return (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Created At
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+        <div className="text-right tabular-nums text-sm text-muted-foreground">
+          {formatted}
         </div>
       );
     },
-    cell: ({ row }) => (
-      <div className="text-right tabular-nums text-sm text-muted-foreground">
-        {new Date(row.getValue("createdAt")).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })}
-      </div>
-    ),
+    enableGlobalFilter: false,
   },
   {
     id: "actions",

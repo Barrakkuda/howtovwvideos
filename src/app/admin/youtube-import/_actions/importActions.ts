@@ -235,7 +235,7 @@ export async function importYouTubeVideo(
 // Wrapper for YouTube search service
 export async function searchYouTubeVideos(
   query: string,
-  maxResults: number = 50,
+  maxResults: number = 10,
 ): Promise<YouTubeSearchResponse> {
   const serviceResponse = await searchVideosService(query, maxResults);
 

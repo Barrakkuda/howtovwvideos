@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable } from "@/components/ui/dataTable";
 import { CategoryEntry, getCategoryColumns } from "./columns";
 import CategoryForm from "@/components/admin/CategoryForm";
 import {
@@ -151,7 +151,11 @@ export default function CategoriesPage() {
       {isFetching ? (
         <p>Loading categories...</p>
       ) : (
-        <DataTable columns={columns} data={categories} />
+        <DataTable
+          columns={columns}
+          data={categories}
+          localStorageKey="adminCategoriesTableState"
+        />
       )}
 
       <Dialog

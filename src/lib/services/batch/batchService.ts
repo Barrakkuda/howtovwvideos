@@ -26,14 +26,14 @@ export interface BatchImportResult {
 }
 
 export interface BatchImportOptions {
-  maxVideos?: number;
+  maxResults?: number;
   searchQuery: string;
 }
 
 export async function batchImportVideos(
   options: BatchImportOptions,
 ): Promise<BatchImportResult[]> {
-  const { maxVideos = 30, searchQuery } = options;
+  const { maxResults = 10, searchQuery } = options;
   const results: BatchImportResult[] = [];
   let uncategorizedCategoryId: number | null = null;
 
@@ -84,7 +84,7 @@ export async function batchImportVideos(
     const availableVWTypeNames = Object.values(VWType);
 
     // Search for videos
-    const searchResponse = await searchYouTubeVideos(searchQuery, maxVideos);
+    const searchResponse = await searchYouTubeVideos(searchQuery, maxResults);
     if (!searchResponse.success || !searchResponse.data) {
       return [
         {
@@ -144,7 +144,7 @@ export async function batchImportVideos(
         }
 
         const videoStatus = isHowToVWVideoFromAnalysis
-          ? VideoStatus.DRAFT
+          ? VideoStatus.PUBLISHED
           : VideoStatus.REJECTED;
 
         // Prepare data for video creation
@@ -164,6 +164,7 @@ export async function batchImportVideos(
           videoCreateData.url = `https://www.youtube.com/watch?v=${video.id}`;
           videoCreateData.thumbnailUrl = video.thumbnailUrl;
           videoCreateData.channelTitle = video.channelTitle;
+          videoCreateData.channelUrl = video.channelUrl;
           videoCreateData.transcript = transcriptText;
 
           // Handle categories

@@ -59,74 +59,67 @@ export const columns: ColumnDef<VideoForTable>[] = [
   },
   {
     accessorKey: "id",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          ID
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className="w-[80px]">{row.getValue("id")}</div>,
-    enableSorting: true,
-    enableHiding: true,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        ID
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => (
+      <div className="w-[80px] font-mono">{row.getValue("id")}</div>
+    ),
+    enableGlobalFilter: true,
   },
   {
     accessorKey: "videoId",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Platform Video ID
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Platform Video ID
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="w-[120px] font-mono">{row.getValue("videoId")}</div>
     ),
-    enableSorting: true,
-    enableHiding: true,
+    enableGlobalFilter: true,
   },
   {
     accessorKey: "title",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Title
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      return (
-        <div className="flex space-x-2">
-          <span className="max-w-[400px] truncate font-medium">
-            <Link
-              href={`/admin/videos/${row.original.id}/edit`}
-              className="hover:underline"
-            >
-              {row.getValue("title")}
-            </Link>
-          </span>
-        </div>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Title
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => (
+      <div className="flex space-x-2">
+        <span className="max-w-[400px] truncate font-medium">
+          <Link
+            href={`/admin/videos/${row.original.id}/edit`}
+            className="hover:underline"
+          >
+            {row.getValue("title")}
+          </Link>
+        </span>
+      </div>
+    ),
+    enableGlobalFilter: true,
   },
   {
     accessorKey: "categories",
     header: "Categories",
     cell: ({ row }) => {
       const categories = row.original.categories;
-      if (!categories || categories.length === 0) {
+      if (!categories?.length) {
         return (
           <span className="text-neutral-500 dark:text-neutral-400">N/A</span>
         );
@@ -146,6 +139,7 @@ export const columns: ColumnDef<VideoForTable>[] = [
       );
     },
     filterFn: "arrIncludesSome",
+    enableGlobalFilter: false,
     enableSorting: false,
   },
   {
@@ -153,21 +147,19 @@ export const columns: ColumnDef<VideoForTable>[] = [
     header: "VW Type(s)",
     cell: ({ row }) => {
       const vwTypes = row.original.vwTypes as VWType[] | undefined;
-      if (!vwTypes || vwTypes.length === 0) {
+      if (!vwTypes?.length) {
         return (
           <span className="text-neutral-500 dark:text-neutral-400">N/A</span>
         );
       }
       return (
         <div className="flex flex-wrap gap-1">
-          {vwTypes.map((type: VWType) => (
+          {vwTypes.map((type) => (
             <Badge key={type} variant="outline" className="whitespace-nowrap">
               {String(type)
                 .toLowerCase()
                 .replace(/_/g, " ")
-                .split(" ")
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(" ")}
+                .replace(/\b\w/g, (char) => char.toUpperCase())}
             </Badge>
           ))}
         </div>
@@ -176,20 +168,19 @@ export const columns: ColumnDef<VideoForTable>[] = [
     filterFn: "arrIncludesSome",
     enableSorting: false,
     enableHiding: true,
+    enableGlobalFilter: false,
   },
   {
     accessorKey: "status",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Status
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const status = row.original.status;
       return (
@@ -198,24 +189,31 @@ export const columns: ColumnDef<VideoForTable>[] = [
         </Badge>
       );
     },
+    filterFn: "arrIncludesSome",
+    enableGlobalFilter: true,
   },
   {
     accessorKey: "createdAt",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created At
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Created At
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const date = new Date(row.getValue("createdAt"));
-      return <span>{date.toLocaleDateString()}</span>;
+      return isNaN(date.getTime()) ? (
+        <span className="text-xs text-muted-foreground italic">
+          Invalid Date
+        </span>
+      ) : (
+        <span>{date.toLocaleDateString()}</span>
+      );
     },
+    enableGlobalFilter: false,
   },
   {
     id: "actions",
@@ -274,5 +272,7 @@ export const columns: ColumnDef<VideoForTable>[] = [
         </AlertDialog>
       );
     },
+    enableSorting: false,
+    enableHiding: false,
   },
 ];

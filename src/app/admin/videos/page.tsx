@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { columns } from "./columns";
-import { DataTable, DataTableFilterField } from "@/components/ui/data-table";
+import { DataTable, DataTableFilterField } from "@/components/ui/dataTable";
 import {
   fetchVideosForTable,
   VideoForTable,
@@ -32,6 +33,21 @@ export default function AdminVideosPage() {
   const [error, setError] = useState<string | null>(null);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
 
+  const searchParams = useSearchParams();
+
+  const tableKey = useMemo(() => {
+    const sortField = searchParams.get("sort_field") || "";
+    const sortDir = searchParams.get("sort_dir") || "";
+    const filterKeys = Array.from(searchParams.keys())
+      .filter((key) => key.startsWith("filter_"))
+      .sort();
+    const filterValues = filterKeys
+      .map((key) => `${key}=${searchParams.get(key)}`)
+      .join("&");
+    return `sort=${sortField}:${sortDir}&filters=${filterValues}`;
+  }, [searchParams]);
+
+  // Re-add the definition for the initial filters
   const initialVideoTableFilters: ColumnFiltersState = useMemo(() => {
     return [
       {
@@ -123,6 +139,9 @@ export default function AdminVideosPage() {
     );
   }
 
+  // console.log("AdminVideosPage: videos data before passing to DataTable:", videos);
+  // console.log("AdminVideosPage: videos count:", videos.length);
+
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -135,12 +154,13 @@ export default function AdminVideosPage() {
       </div>
 
       <DataTable<VideoForTable, unknown>
+        key={tableKey}
+        localStorageKey="adminVideosTableState"
         columns={columns as ColumnDef<VideoForTable, unknown>[]}
         data={videos}
         filterColumnPlaceholder="Search in title and video ID..."
         facetFilters={facetFilters}
         initialColumnFilters={initialVideoTableFilters}
-        searchableColumns={["title", "videoId"]}
       />
     </>
   );

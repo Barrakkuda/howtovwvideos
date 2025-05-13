@@ -61,7 +61,7 @@ function decodeHtmlEntities(text: string): string {
 
 export async function searchYouTubeVideos(
   query: string,
-  maxResults: number = 50,
+  maxResults: number = 10,
 ): Promise<YouTubeSearchResponse> {
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");
@@ -109,8 +109,16 @@ export async function searchYouTubeVideos(
       return { success: true, data: [] };
     }
 
-    const videos: YouTubeVideoItem[] = data.items.map(
-      (item: YouTubeApiItem) => {
+    const videos: YouTubeVideoItem[] = await Promise.all(
+      data.items.map(async (item: YouTubeApiItem) => {
+        // Get full video details using videos.list endpoint
+        const fullVideoInfo = await getYouTubeVideoInfo(item.id.videoId);
+
+        if (fullVideoInfo.success && fullVideoInfo.data) {
+          return fullVideoInfo.data;
+        }
+
+        // Fallback to search result data if full video info fetch fails
         const thumbs = item.snippet.thumbnails;
         let selectedThumbnailUrl = thumbs.default.url;
 
@@ -128,9 +136,10 @@ export async function searchYouTubeVideos(
           description: decodeHtmlEntities(item.snippet.description),
           thumbnailUrl: selectedThumbnailUrl,
           channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
+          channelUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.snippet.channelTitle)}`,
           publishedAt: item.snippet.publishedAt,
         };
-      },
+      }),
     );
 
     return { success: true, data: videos };
