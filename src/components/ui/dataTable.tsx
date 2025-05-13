@@ -49,6 +49,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  XIcon,
 } from "lucide-react";
 import {
   Select,
@@ -415,12 +416,28 @@ export function DataTable<TData, TValue>({
       {/* Toolbar: Filters + Column Visibility */}
       <div className="flex items-center gap-2">
         {/* Global Filter Input */}
-        <Input
-          placeholder={filterColumnPlaceholder}
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(String(event.target.value))}
-          className="h-8 w-full sm:w-[250px]" // Adjust size as needed
-        />
+        <div className="relative w-full max-w-sm">
+          <Input
+            placeholder={filterColumnPlaceholder}
+            value={globalFilter ?? ""}
+            onChange={(event) => setGlobalFilter(String(event.target.value))}
+            className="h-8 pr-8"
+          />
+          {globalFilter && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setGlobalFilter("");
+              }}
+            >
+              <XIcon className="h-4 w-4" />
+              <span className="sr-only">Clear</span>
+            </Button>
+          )}
+        </div>
 
         {/* Facet Filters Dropdowns */}
         {facetFilters.map((facet) => {

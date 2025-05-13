@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
@@ -28,6 +28,18 @@ const formatVWType = (type: VWType): string => {
 };
 
 export default function AdminVideosPage() {
+  return (
+    <Suspense fallback={<AdminVideosPageClientLoader />}>
+      <AdminVideosPageClient />
+    </Suspense>
+  );
+}
+
+function AdminVideosPageClientLoader() {
+  return <p className="text-center py-10">Loading video manager...</p>;
+}
+
+function AdminVideosPageClient() {
   const [videos, setVideos] = useState<VideoForTable[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +140,8 @@ export default function AdminVideosPage() {
   }, [allCategories]);
 
   if (isLoading) {
-    return <p className="text-center py-10">Loading videos...</p>;
+    // Use the same loader component for consistency during data fetching
+    return <AdminVideosPageClientLoader />;
   }
 
   if (error) {
@@ -138,9 +151,6 @@ export default function AdminVideosPage() {
       </p>
     );
   }
-
-  // console.log("AdminVideosPage: videos data before passing to DataTable:", videos);
-  // console.log("AdminVideosPage: videos count:", videos.length);
 
   return (
     <>
