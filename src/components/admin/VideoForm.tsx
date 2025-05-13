@@ -7,7 +7,7 @@ import {
   VideoPlatform,
   VWType,
 } from "@generated/prisma";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import React from "react";
@@ -87,13 +87,22 @@ export default function VideoForm({
   const [showPublishMessage, setShowPublishMessage] = useState(false);
 
   const form = useForm<VideoFormData>({
-    resolver: zodResolver(videoSchema),
+    resolver: zodResolver(videoSchema) as unknown as Resolver<VideoFormData>,
     defaultValues: initialData
       ? {
-          ...initialData,
+          platform: initialData.platform ?? VideoPlatform.YOUTUBE,
+          videoId: initialData.videoId ?? "",
+          title: initialData.title ?? "",
+          description: initialData.description ?? "",
+          url: initialData.url ?? "",
+          thumbnailUrl: initialData.thumbnailUrl ?? "",
+          channelTitle: initialData.channelTitle ?? "",
+          channelUrl: initialData.channelUrl ?? "",
           categoryIds: initialData.categoryIds || [],
+          status: initialData.status ?? VideoStatus.DRAFT,
           tags: initialData.tags || [],
           vwTypes: initialData.vwTypes || [],
+          transcript: initialData.transcript ?? "",
         }
       : {
           platform: VideoPlatform.YOUTUBE,
@@ -102,10 +111,13 @@ export default function VideoForm({
           description: "",
           url: "",
           thumbnailUrl: "",
+          channelTitle: "",
+          channelUrl: "",
           categoryIds: [],
           status: VideoStatus.DRAFT,
           tags: [],
           vwTypes: [],
+          transcript: "",
         },
   });
 
@@ -146,8 +158,19 @@ export default function VideoForm({
     setIsTranscriptLoading(true);
     try {
       const result = await getVideoTranscript(initialData.videoId);
+      console.log("Received result from getVideoTranscript:", result);
+
       if (result.success) {
         toast.success(result.message);
+        if (typeof result.transcript === "string") {
+          form.setValue("transcript", result.transcript, {
+            shouldValidate: true,
+          });
+        } else {
+          toast.info(
+            `Transcript fetched successfully, but received type: ${typeof result.transcript}`,
+          );
+        }
       } else {
         toast.error(result.message);
       }
@@ -164,14 +187,99 @@ export default function VideoForm({
   const handleAnalyzeWithOpenAI = async () => {
     if (!initialData?.videoId) return;
 
+    // Get transcript from form state
+    const transcript = form.watch("transcript");
+
+    // Ensure transcript is available before calling action
+    if (
+      !transcript ||
+      typeof transcript !== "string" ||
+      transcript.trim().length === 0
+    ) {
+      toast.error("Transcript is not available or empty. Cannot analyze.");
+      return;
+    }
+
     setIsAnalysisLoading(true);
     setOpenAIAnalysis({ analysis: null, error: null });
     try {
-      const result = await analyzeVideoWithOpenAI(initialData.videoId);
+      // Pass videoId and transcript to the action
+      const result = await analyzeVideoWithOpenAI(
+        initialData.videoId,
+        transcript,
+      );
       if (result.success) {
         toast.success(result.message);
         if (result.analysis) {
           setOpenAIAnalysis({ analysis: result.analysis, error: null });
+
+          // --- Update form fields with OpenAI suggestions ---
+          const {
+            categories: suggestedCategories,
+            vwTypes: suggestedVwTypes,
+            tags: suggestedTags,
+          } = result.analysis;
+
+          // Update Categories (Merging)
+          if (suggestedCategories && suggestedCategories.length > 0) {
+            const matchedCategoryIds = suggestedCategories
+              .map(
+                (name) =>
+                  categories.find(
+                    (cat) => cat.name.toLowerCase() === name.toLowerCase(),
+                  )?.id,
+              )
+              .filter((id): id is number => id !== null && id !== undefined); // Type guard
+            if (matchedCategoryIds.length > 0) {
+              form.setValue(
+                "categoryIds",
+                Array.from(
+                  new Set([
+                    ...(form.getValues("categoryIds") || []),
+                    ...matchedCategoryIds,
+                  ]),
+                ),
+                { shouldValidate: true },
+              );
+            }
+          }
+
+          // Update VW Types (Merging)
+          if (suggestedVwTypes && suggestedVwTypes.length > 0) {
+            const matchedVwTypes = suggestedVwTypes
+              .map((name) => {
+                const formattedName = name.toLowerCase().replace(/\s+|-/g, "_");
+                return vwTypeEnumValues.find(
+                  (vwt) => vwt.toLowerCase() === formattedName,
+                );
+              })
+              .filter(
+                (vwt): vwt is VWType => vwt !== null && vwt !== undefined,
+              ); // Type guard
+            if (matchedVwTypes.length > 0) {
+              form.setValue(
+                "vwTypes",
+                Array.from(
+                  new Set([
+                    ...(form.getValues("vwTypes") || []),
+                    ...matchedVwTypes,
+                  ]),
+                ),
+                { shouldValidate: true },
+              );
+            }
+          }
+
+          // Update Tags (Merging)
+          if (suggestedTags && suggestedTags.length > 0) {
+            const currentTags = form.getValues("tags") || [];
+            form.setValue(
+              "tags",
+              Array.from(new Set([...currentTags, ...suggestedTags])),
+              { shouldValidate: true },
+            );
+          }
+          // --- End of form field update ---
         }
       } else {
         toast.error(result.message);
@@ -632,7 +740,7 @@ export default function VideoForm({
               variant="outline"
               onClick={handleAnalyzeWithOpenAI}
               disabled={
-                isAnalysisLoading || isSubmitting || !initialData.transcript
+                isAnalysisLoading || isSubmitting || !watch("transcript")
               }
             >
               {isAnalysisLoading ? "Analyzing..." : "Prompt OpenAI"}
@@ -640,20 +748,19 @@ export default function VideoForm({
           </div>
         )}
 
-        {initialData?.transcript && (
+        {watch("transcript") && (
           <>
             <FormField
               control={form.control}
               name="transcript"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Transcript (Read-only)</FormLabel>
+                  <FormLabel>Transcript</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Video transcript..."
                       className="resize-y min-h-[100px] max-h-[300px] bg-muted/50"
                       {...field}
-                      value={initialData.transcript || ""}
                       readOnly
                     />
                   </FormControl>

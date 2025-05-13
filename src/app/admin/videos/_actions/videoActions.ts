@@ -34,6 +34,7 @@ export async function addVideo(formData: VideoFormData) {
         thumbnailUrl: data.thumbnailUrl as string | null,
         channelTitle: data.channelTitle as string | null,
         channelUrl: data.channelUrl as string | null,
+        transcript: data.transcript,
         status: data.status as VideoStatus,
         tags: data.tags,
         vwTypes: data.vwTypes as VWType[] | undefined,
@@ -133,6 +134,7 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         thumbnailUrl: data.thumbnailUrl as string | null,
         channelTitle: data.channelTitle as string | null,
         channelUrl: data.channelUrl as string | null,
+        transcript: data.transcript,
         status: data.status as VideoStatus,
         tags: data.tags,
         vwTypes: data.vwTypes as VWType[] | undefined,
@@ -196,35 +198,33 @@ export async function updateVideo(id: number, formData: VideoFormData) {
   }
 }
 
-// Helper function to map string to VWType enum value
-function mapStringToVWType(typeString: string): VWType | undefined {
-  const upperTypeString = typeString.toUpperCase();
-  if (upperTypeString in VWType) {
-    return VWType[upperTypeString as keyof typeof VWType];
-  }
-  console.warn(`Unknown VWType string from OpenAI: ${typeString}`);
-  return undefined;
-}
-
 export async function getVideoTranscript(videoId: string) {
   try {
     const transcriptResponse = await getTranscriptService(videoId);
+    console.log(
+      "getVideoTranscript - transcriptResponse from service:",
+      transcriptResponse,
+    );
+
     if (transcriptResponse.success && transcriptResponse.transcript) {
-      // Update the video with the transcript
-      await prisma.video.update({
-        where: { videoId },
-        data: { transcript: transcriptResponse.transcript },
-      });
-      revalidatePath("/admin/videos");
+      console.log(
+        "getVideoTranscript - returning transcript:",
+        transcriptResponse.transcript,
+      );
       return {
         success: true,
-        message: "Transcript fetched and saved successfully!",
+        message: "Transcript fetched successfully!",
         transcript: transcriptResponse.transcript,
       };
     } else {
+      console.log(
+        "getVideoTranscript - service failed or no transcript in response:",
+        transcriptResponse?.error,
+      );
       return {
         success: false,
-        message: transcriptResponse.error || "Failed to fetch transcript",
+        message:
+          transcriptResponse.error || "Failed to fetch transcript from service",
       };
     }
   } catch (error) {
@@ -237,30 +237,35 @@ export async function getVideoTranscript(videoId: string) {
   }
 }
 
-export async function analyzeVideoWithOpenAI(videoId: string) {
+export async function analyzeVideoWithOpenAI(
+  videoId: string,
+  transcript: string,
+) {
   try {
-    // Get the video and its transcript
-    const video = await prisma.video.findUnique({
+    if (
+      !transcript ||
+      typeof transcript !== "string" ||
+      transcript.trim().length === 0
+    ) {
+      return {
+        success: false,
+        message: "Invalid or empty transcript provided for analysis.",
+      };
+    }
+
+    // We need the video title for analysis context
+    const videoData = await prisma.video.findUnique({
       where: { videoId },
-      select: { transcript: true, title: true },
+      select: { title: true },
     });
 
-    if (!video) {
+    if (!videoData) {
       return {
         success: false,
-        message: "Video not found",
+        message: "Video not found, cannot get title for analysis context.",
       };
     }
 
-    if (!video.transcript) {
-      return {
-        success: false,
-        message:
-          "No transcript available for analysis. Please fetch the transcript first.",
-      };
-    }
-
-    // Get existing categories for reference
     const categoriesFromDb = await prisma.category.findMany({
       select: { name: true },
       orderBy: { name: "asc" },
@@ -268,12 +273,11 @@ export async function analyzeVideoWithOpenAI(videoId: string) {
     const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
     const availableVWTypeNames = Object.values(VWType);
 
-    // Analyze the transcript
     const analysisResponse = await analyzeTranscriptService(
-      video.transcript,
+      transcript,
       existingCategoryNames,
       availableVWTypeNames,
-      video.title,
+      videoData.title,
     );
 
     if (!analysisResponse.success || !analysisResponse.data) {
@@ -283,71 +287,10 @@ export async function analyzeVideoWithOpenAI(videoId: string) {
       };
     }
 
-    const { data: analysis } = analysisResponse;
-
-    // Update the video with the analysis results
-    const updateData: Prisma.VideoUpdateInput = {};
-
-    // Update VW Types if available
-    if (analysis.vwTypes && analysis.vwTypes.length > 0) {
-      const mappedVwTypes = analysis.vwTypes
-        .map(mapStringToVWType)
-        .filter((type): type is VWType => type !== undefined);
-      if (mappedVwTypes.length > 0) {
-        updateData.vwTypes = mappedVwTypes;
-      }
-    }
-
-    // Update tags if available
-    if (analysis.tags && analysis.tags.length > 0) {
-      updateData.tags = analysis.tags;
-    }
-
-    // Update categories if available
-    if (analysis.categories && analysis.categories.length > 0) {
-      // First, find or create categories
-      const categoryIds: number[] = [];
-      for (const name of analysis.categories) {
-        if (!name.trim()) continue;
-        let category = await prisma.category.findFirst({
-          where: { name: { equals: name.trim(), mode: "insensitive" } },
-        });
-        if (!category) {
-          category = await prisma.category.create({
-            data: { name: name.trim() },
-          });
-        }
-        if (category && !categoryIds.includes(category.id)) {
-          categoryIds.push(category.id);
-        }
-      }
-
-      // Then update the video's categories
-      if (categoryIds.length > 0) {
-        // First remove existing categories
-        await prisma.categoriesOnVideos.deleteMany({
-          where: { video: { videoId } },
-        });
-        // Then add new ones
-        updateData.categories = {
-          create: categoryIds.map((catId) => ({
-            category: { connect: { id: catId } },
-            assignedBy: "openai-analysis",
-          })),
-        };
-      }
-    }
-
-    // Update the video with all the changes
-    await prisma.video.update({
-      where: { videoId },
-      data: updateData,
-    });
-
-    revalidatePath("/admin/videos");
     return {
       success: true,
-      message: "Video analyzed and updated successfully!",
+      message:
+        "Video analyzed successfully with OpenAI. Form fields will be updated with suggestions.",
       analysis: analysisResponse.data,
     };
   } catch (error) {
@@ -362,62 +305,33 @@ export async function analyzeVideoWithOpenAI(videoId: string) {
 
 export async function refetchVideoInfo(videoId: string) {
   try {
-    // Get the video to check its platform and current data
-    const video = await prisma.video.findUnique({
-      where: { videoId },
-      select: {
-        platform: true,
-        title: true,
-        status: true,
-      },
-    });
-
-    if (!video) {
-      return {
-        success: false,
-        message: "Video not found",
-      };
-    }
-
-    if (video.platform !== VideoPlatform.YOUTUBE) {
-      return {
-        success: false,
-        message: "Refetching video info is only supported for YouTube videos",
-      };
-    }
-
-    // Fetch fresh data from YouTube
     const videoInfo = await getYouTubeVideoInfo(videoId);
-    if (!videoInfo.success || !videoInfo.data) {
+
+    if (!videoInfo) {
       return {
         success: false,
-        message:
-          videoInfo.error || "Failed to fetch video information from YouTube",
+        message: `Could not fetch video info for ID: ${videoId}`,
       };
     }
 
-    const { data } = videoInfo;
+    if (!videoInfo.data) {
+      return {
+        success: false,
+        message: "Video info fetched successfully, but data is missing.",
+      };
+    }
 
-    // Update the video with the fetched information
-    const updateData: Prisma.VideoUpdateInput = {
-      title: data.title,
-      description: data.description || "",
-      url: `https://www.youtube.com/watch?v=${videoId}`,
-      thumbnailUrl: data.thumbnailUrl,
-      channelTitle: data.channelTitle,
-      channelUrl: data.channelUrl,
-    };
-
-    await prisma.video.update({
-      where: { videoId },
-      data: updateData,
-    });
-
-    revalidatePath("/admin/videos");
     return {
       success: true,
-      message: "Video information updated successfully",
-      data: updateData,
+      message: "Video info refetched successfully!",
+      data: {
+        title: videoInfo.data.title,
+        description: videoInfo.data.description,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        thumbnailUrl: videoInfo.data.thumbnailUrl,
+        channelTitle: videoInfo.data.channelTitle,
+        channelUrl: videoInfo.data.channelUrl,
+      },
     };
   } catch (error) {
     console.error("Error refetching video info:", error);

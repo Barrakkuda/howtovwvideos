@@ -24,25 +24,12 @@ export const videoSchema = z.object({
     .or(z.literal("")),
   categoryIds: z
     .array(z.coerce.number().int().positive())
-    .min(1, { message: "Please select at least one category" }),
-  status: z.nativeEnum(VideoStatus).optional(),
+    .optional()
+    .default([]),
+  status: z.nativeEnum(VideoStatus),
   tags: z.array(z.string()).optional().default([]),
   vwTypes: z.array(z.nativeEnum(VWType)).optional().default([]),
+  transcript: z.string().optional(),
 });
 
-// Manually define VideoFormData to include fields not in the schema for submission (like read-only transcript)
-export interface VideoFormData {
-  platform: VideoPlatform;
-  videoId: string;
-  title: string;
-  description?: string;
-  url?: string;
-  thumbnailUrl?: string;
-  channelTitle?: string;
-  channelUrl?: string;
-  categoryIds: number[];
-  status?: VideoStatus;
-  transcript?: string | null;
-  tags?: string[];
-  vwTypes?: VWType[];
-}
+export type VideoFormData = z.infer<typeof videoSchema>;
