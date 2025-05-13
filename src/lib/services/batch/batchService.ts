@@ -118,11 +118,11 @@ export async function batchImportVideos(
         let transcriptText = null;
         let openAIAnalysis: OpenAIAnalysisResponse | null = null;
         let isHowToVWVideoFromAnalysis = false;
+        let analysisError: string | null = null;
 
         if (transcriptResult.success && transcriptResult.transcript) {
           transcriptText = transcriptResult.transcript;
 
-          // Analyze with OpenAI if we have a transcript
           const analysisResult = await analyzeTranscriptWithOpenAI(
             transcriptText,
             existingCategoryNames,
@@ -133,11 +133,17 @@ export async function batchImportVideos(
             openAIAnalysis = analysisResult.data;
             isHowToVWVideoFromAnalysis = analysisResult.data.isHowToVWVideo;
           } else {
+            analysisError =
+              analysisResult.error ||
+              "OpenAI analysis failed for unknown reason.";
             console.warn(
-              `OpenAI analysis failed for ${video.id}: ${analysisResult.error}`,
+              `OpenAI analysis failed for ${video.id}: ${analysisError}`,
             );
           }
         } else {
+          analysisError =
+            transcriptResult.error ||
+            "Could not fetch transcript for analysis.";
           console.log(
             `No transcript for ${video.id}, cannot perform OpenAI analysis.`,
           );
@@ -156,6 +162,7 @@ export async function batchImportVideos(
           sourceKeyword: searchQuery,
           processedAt: new Date(),
           status: videoStatus,
+          processingError: analysisError,
         };
 
         if (isHowToVWVideoFromAnalysis) {

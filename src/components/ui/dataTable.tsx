@@ -118,26 +118,29 @@ function parseUrlState(
   const sorting: SortingState =
     sortField && sortDir ? [{ id: sortField, desc: sortDir === "desc" }] : [];
 
-  const columnFilters: ColumnFiltersState = [];
+  let columnFilters: ColumnFiltersState | undefined = undefined; // Initialize as undefined
+  const tempFilters: ColumnFiltersState = [];
   searchParams.forEach((value, key) => {
     if (key.startsWith("filter_")) {
       const columnId = key.substring("filter_".length);
-      // Split by dash (used as separator in updateUrlState)
       const filterValues = value ? value.split("-") : [];
       if (filterValues.length > 0) {
-        columnFilters.push({ id: columnId, value: filterValues });
+        tempFilters.push({ id: columnId, value: filterValues });
       }
     }
   });
 
-  // Default to page 1 (index 0) if not specified or invalid
+  if (tempFilters.length > 0) {
+    columnFilters = tempFilters; // Assign only if filters were found
+  }
+
   const pageParam = searchParams.get("page");
   const pageIndex = pageParam ? Math.max(0, parseInt(pageParam, 10) - 1) : 0;
 
-  // Default to 10 rows per page if not specified or invalid
   const sizeParam = searchParams.get("pageSize");
-  const pageSize = sizeParam ? Math.max(1, parseInt(sizeParam, 10)) : 10; // Default page size
+  const pageSize = sizeParam ? Math.max(1, parseInt(sizeParam, 10)) : 50;
 
+  // Ensure columnFilters is part of the returned object, possibly as undefined
   return { sorting, columnFilters, pagination: { pageIndex, pageSize } };
 }
 
@@ -204,6 +207,7 @@ export function DataTable<TData, TValue>({
   const searchParams = useSearchParams();
 
   const [isMounted, setIsMounted] = useState(false);
+  const didHydrate = useRef(false); // Ref to track hydration
 
   // Memoize the function to get the initial state based on priority
   const getInitialState = useCallback((): PersistentTableState => {
@@ -222,7 +226,7 @@ export function DataTable<TData, TValue>({
     const stateFromUrl = parseUrlState(searchParams);
 
     // Define default states
-    const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 10 }; // Consistent default page size
+    const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 50 }; // CHANGED
     const defaultSorting: SortingState = []; // Default to no sorting unless specified
     const defaultColumnVisibility: VisibilityState = {}; // Default to all visible unless specified
 
@@ -258,7 +262,7 @@ export function DataTable<TData, TValue>({
     initialComputedState.current.columnFilters ?? [],
   );
   const [pagination, setPagination] = useState<PaginationState>(
-    initialComputedState.current.pagination ?? { pageIndex: 0, pageSize: 10 },
+    initialComputedState.current.pagination ?? { pageIndex: 0, pageSize: 50 },
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     initialComputedState.current.columnVisibility ?? {},
@@ -316,7 +320,7 @@ export function DataTable<TData, TValue>({
         }
 
         // Set new pagination params (only if not default)
-        const defaultPageSize = 10;
+        const defaultPageSize = 50; // CHANGED
         if (newState.pagination && newState.pagination.pageIndex > 0) {
           params.set("page", (newState.pagination.pageIndex + 1).toString());
         }
@@ -334,8 +338,35 @@ export function DataTable<TData, TValue>({
     ),
   ).current;
 
-  // Effect to trigger state update when relevant states change (after mount)
+  // Effect to set mounted flag
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Effect to handle initial state hydration from client-side sources (runs only once after mount)
+  useEffect(() => {
+    // Only run hydration if mounted and haven't hydrated yet
+    if (isMounted && !didHydrate.current) {
+      const clientSideInitialState = getInitialState();
+
+      // Set initial state directly
+      setSorting(clientSideInitialState.sorting ?? []);
+      setColumnFilters(clientSideInitialState.columnFilters ?? []);
+      setPagination(
+        clientSideInitialState.pagination ?? { pageIndex: 0, pageSize: 50 },
+      );
+      setColumnVisibility(clientSideInitialState.columnVisibility ?? {});
+
+      // Mark hydration as done
+      didHydrate.current = true;
+    }
+    // getInitialState is included because it's used inside, satisfying linter.
+    // The didHydrate ref prevents re-setting state even if getInitialState changes.
+  }, [isMounted, getInitialState]);
+
+  // State Synchronization Effect (runs whenever state changes *after* mount)
+  useEffect(() => {
+    // Only run sync if mounted (which implies hydration attempt has happened)
     if (isMounted) {
       debouncedStateUpdate({
         sorting,
@@ -350,25 +381,8 @@ export function DataTable<TData, TValue>({
     pagination,
     columnVisibility,
     debouncedStateUpdate,
-    isMounted,
+    isMounted, // Ensure sync only happens client-side after mount
   ]);
-
-  // Effect to handle mounting and initial state hydration from client-side sources
-  useEffect(() => {
-    // Set mounted flag
-    setIsMounted(true);
-
-    // Re-calculate initial state *after* mount to ensure localStorage is accessible
-    const clientSideInitialState = getInitialState();
-
-    // Update state hooks with potentially updated initial state from localStorage/URL
-    setSorting(clientSideInitialState.sorting ?? []);
-    setColumnFilters(clientSideInitialState.columnFilters ?? []);
-    setPagination(
-      clientSideInitialState.pagination ?? { pageIndex: 0, pageSize: 10 },
-    );
-    setColumnVisibility(clientSideInitialState.columnVisibility ?? {});
-  }, [getInitialState]);
 
   // --- TanStack Table Instance ---
   const table = useReactTable<TData>({
@@ -410,7 +424,7 @@ export function DataTable<TData, TValue>({
     // Clear all table state
     setSorting([]);
     setColumnFilters(initialColumnFilters);
-    setPagination({ pageIndex: 0, pageSize: 10 });
+    setPagination({ pageIndex: 0, pageSize: 50 });
     setColumnVisibility({});
     setGlobalFilter("");
     setRowSelection({});

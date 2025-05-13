@@ -121,7 +121,7 @@ export async function importYouTubeVideo(
       isHowToVWVideo: isHowToVWVideo,
       sourceKeyword: sourceKeyword,
       processedAt: new Date(),
-      status: isHowToVWVideo ? VideoStatus.DRAFT : VideoStatus.REJECTED,
+      status: isHowToVWVideo ? VideoStatus.PUBLISHED : VideoStatus.REJECTED,
       // Conditional fields based on isHowToVWVideo
       ...(isHowToVWVideo && {
         description: videoData.description || "",
