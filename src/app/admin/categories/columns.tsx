@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Category as PrismaCategory } from "@generated/prisma";
 import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export type CategoryForTable = Pick<
   PrismaCategory,
@@ -19,6 +20,30 @@ export const getCategoryColumns = ({
   onEdit: (category: CategoryForTable) => void;
   onDelete: (category: CategoryForTable) => void;
 }): ColumnDef<CategoryForTable>[] => [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+        className="translate-y-[2px]"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+        className="translate-y-[2px]"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: "id",
     header: ({ column }) => (

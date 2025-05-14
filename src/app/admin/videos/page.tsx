@@ -18,7 +18,11 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { columns } from "./columns";
-import { DataTable, DataTableFilterField } from "@/components/ui/dataTable";
+import {
+  DataTable,
+  DataTableFilterField,
+  BulkAction,
+} from "@/components/ui/dataTable";
 import {
   fetchVideosForTable,
   VideoForTable,
@@ -33,8 +37,24 @@ import {
   PaginationState,
   VisibilityState,
   RowSelectionState,
+  Row,
 } from "@tanstack/react-table";
 import { formatVideoStatus } from "@/lib/utils/formatters";
+import { Trash2, Sparkles } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  bulkDeleteVideos,
+  bulkGenerateSlugsForVideos,
+} from "./_actions/videoActions";
 
 // Helper to format VWType enum for display
 const formatVWType = (type: VWType): string => {
@@ -122,6 +142,10 @@ function AdminVideosPageClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [videosToBulkDelete, setVideosToBulkDelete] = useState<
+    Row<VideoForTable>[]
+  >([]);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -306,40 +330,125 @@ function AdminVideosPageClient() {
     // The sync useEffect will automatically update the URL to a clean state (reflecting defaults).
   }, [initialVideoTableFilters, defaultPageSizeForTable]);
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const videosData = await fetchVideosForTable();
-        if (videosData.success && videosData.data) {
-          setVideos(videosData.data);
-        } else {
-          setError(videosData.error || "Failed to fetch videos.");
-          toast.error(videosData.error || "Failed to fetch videos.");
-        }
+  const loadData = useCallback(async () => {
+    console.log("AdminVideosPageClient: loadData triggered");
+    setIsLoading(true);
+    try {
+      const [videosResult, categoriesResult] = await Promise.all([
+        fetchVideosForTable(),
+        fetchAllCategories(),
+      ]);
 
-        const categoriesData = await fetchAllCategories();
-        if (categoriesData.success && categoriesData.data) {
-          setAllCategories(categoriesData.data);
-        } else {
-          setError(
-            (prevError) =>
-              (prevError ? prevError + ": " : "") +
-              (categoriesData.error || "Failed to fetch categories."),
-          );
-          toast.error(categoriesData.error || "Failed to fetch categories.");
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "An unknown error occurred.";
-        setError(errorMessage);
-        toast.error(`Error loading data: ${errorMessage}`);
-      } finally {
-        setIsLoading(false);
+      if (videosResult.success && videosResult.data) {
+        setVideos(videosResult.data);
+      } else {
+        setError(videosResult.error || "Failed to fetch videos.");
+        toast.error(videosResult.error || "Failed to fetch videos.");
       }
+
+      if (categoriesResult.success && categoriesResult.data) {
+        setAllCategories(categoriesResult.data);
+      } else {
+        // Non-critical, but log it or show a minor toast
+        console.warn(
+          categoriesResult.error || "Failed to fetch categories for filters.",
+        );
+        toast.warning(
+          categoriesResult.error || "Failed to fetch categories for filters.",
+        );
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred.";
+      setError(errorMessage);
+      toast.error(`Error loading data: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      // Only load data if component is mounted and hydrated
+      loadData();
+    }
+  }, [isMounted, loadData]); // Include loadData in dependencies
+
+  // Bulk Action Handlers
+  const handleBulkDeleteRequest = useCallback(
+    (selectedRows: Row<VideoForTable>[]) => {
+      if (selectedRows.length === 0) {
+        toast.info("No videos selected for deletion.");
+        return;
+      }
+      setVideosToBulkDelete(selectedRows);
+      setShowBulkDeleteDialog(true);
+    },
+    [],
+  );
+
+  const confirmBulkDelete = useCallback(async () => {
+    if (videosToBulkDelete.length === 0) return;
+
+    const videoIds = videosToBulkDelete.map((row) => row.original.id);
+    toast.promise(bulkDeleteVideos(videoIds), {
+      loading: `Deleting ${videoIds.length} video(s)...`,
+      success: (result) => {
+        loadData(); // Refresh data
+        setShowBulkDeleteDialog(false);
+        setVideosToBulkDelete([]);
+        return (
+          result.message ||
+          `${result.count || videoIds.length} video(s) deleted successfully.`
+        );
+      },
+      error: (err) => {
+        setShowBulkDeleteDialog(false); // Still close dialog on error
+        return err.message || "Failed to delete selected videos.";
+      },
+    });
+  }, [videosToBulkDelete, loadData]);
+
+  const handleBulkGenerateSlugs = useCallback(
+    async (selectedRows: Row<VideoForTable>[]) => {
+      if (selectedRows.length === 0) {
+        toast.info("No videos selected for slug generation.");
+        return;
+      }
+      const videoIds = selectedRows.map((row) => row.original.id);
+      toast.promise(bulkGenerateSlugsForVideos(videoIds), {
+        loading: `Generating slugs for ${videoIds.length} video(s)...`,
+        success: (result) => {
+          loadData(); // Refresh data
+          return (
+            result.message ||
+            `${result.count || videoIds.length} video slug(s) generated/updated.`
+          );
+        },
+        error: (err) =>
+          err.message || "Failed to generate slugs for selected videos.",
+      });
+    },
+    [loadData],
+  );
+
+  // Define bulk actions array
+  const videoBulkActions: BulkAction<VideoForTable>[] = useMemo(
+    () => [
+      {
+        label: "Generate Slug(s)",
+        icon: Sparkles,
+        action: handleBulkGenerateSlugs,
+      },
+      {
+        label: "Delete Selected",
+        icon: Trash2,
+        action: handleBulkDeleteRequest, // This opens the confirmation dialog
+        isDestructive: true,
+      },
+    ],
+    [handleBulkGenerateSlugs, handleBulkDeleteRequest],
+  );
 
   const facetFilters = useMemo((): DataTableFilterField<VideoForTable>[] => {
     const statusOptions = Object.values(VideoStatus).map((status) => ({
@@ -418,7 +527,36 @@ function AdminVideosPageClient() {
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         onResetTableConfig={handleResetTableConfig}
+        bulkActions={videoBulkActions}
       />
+
+      {videosToBulkDelete.length > 0 && (
+        <AlertDialog
+          open={showBulkDeleteDialog}
+          onOpenChange={setShowBulkDeleteDialog}
+        >
+          <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Bulk Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {videosToBulkDelete.length}{" "}
+                video(s)? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowBulkDeleteDialog(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmBulkDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete {videosToBulkDelete.length} Video(s)
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

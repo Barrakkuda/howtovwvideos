@@ -15,10 +15,20 @@ import {
   type ReadonlyURLSearchParams,
 } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import { DataTable, DataTableFilterField } from "@/components/ui/dataTable";
+import { PlusIcon, Trash2, Sparkles } from "lucide-react";
+import {
+  DataTable,
+  DataTableFilterField,
+  BulkAction,
+} from "@/components/ui/dataTable";
 import { toast } from "sonner";
-import { fetchAllCategories, deleteCategory } from "./_actions/categoryActions";
+import {
+  fetchAllCategories,
+  deleteCategory,
+  bulkDeleteCategories,
+  bulkGenerateSlugsForCategories,
+  type BulkActionResponse,
+} from "./_actions/categoryActions";
 import type { Category as PrismaCategory } from "@generated/prisma";
 import {
   ColumnDef,
@@ -27,6 +37,7 @@ import {
   PaginationState,
   VisibilityState,
   RowSelectionState,
+  Row,
 } from "@tanstack/react-table";
 import {
   AlertDialog,
@@ -128,6 +139,11 @@ function AdminCategoriesPageClient() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [categoryToDelete, setCategoryToDelete] =
     useState<CategoryForTable | null>(null);
+  const [showBulkDeleteCategoriesDialog, setShowBulkDeleteCategoriesDialog] =
+    useState(false);
+  const [categoriesToBulkDelete, setCategoriesToBulkDelete] = useState<
+    Row<CategoryForTable>[]
+  >([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] =
     useState<CategoryForTable | null>(null);
@@ -313,6 +329,80 @@ function AdminCategoriesPageClient() {
     setShowDeleteDialog(true);
   }, []);
 
+  const handleBulkDeleteCategoriesRequest = useCallback(
+    (selectedRows: Row<CategoryForTable>[]) => {
+      if (selectedRows.length === 0) {
+        toast.info("No categories selected for deletion.");
+        return;
+      }
+      setCategoriesToBulkDelete(selectedRows);
+      setShowBulkDeleteCategoriesDialog(true);
+    },
+    [],
+  );
+
+  const confirmBulkDeleteCategories = useCallback(async () => {
+    if (categoriesToBulkDelete.length === 0) return;
+
+    const categoryIds = categoriesToBulkDelete.map((row) => row.original.id);
+    toast.promise(bulkDeleteCategories(categoryIds), {
+      loading: `Deleting ${categoryIds.length} categor(y/ies)...`,
+      success: (result: BulkActionResponse) => {
+        loadCategories();
+        setShowBulkDeleteCategoriesDialog(false);
+        setCategoriesToBulkDelete([]);
+        return (
+          result.message ||
+          `${result.count || categoryIds.length} categor(y/ies) deleted successfully.`
+        );
+      },
+      error: (err: Error) => {
+        setShowBulkDeleteCategoriesDialog(false);
+        return err.message || "Failed to delete selected categories.";
+      },
+    });
+  }, [categoriesToBulkDelete, loadCategories]);
+
+  const handleBulkGenerateSlugsForCategories = useCallback(
+    async (selectedRows: Row<CategoryForTable>[]) => {
+      if (selectedRows.length === 0) {
+        toast.info("No categories selected for slug generation.");
+        return;
+      }
+      const categoryIds = selectedRows.map((row) => row.original.id);
+      toast.promise(bulkGenerateSlugsForCategories(categoryIds), {
+        loading: `Generating slugs for ${categoryIds.length} categor(y/ies)...`,
+        success: (result: BulkActionResponse) => {
+          loadCategories();
+          return (
+            result.message ||
+            `${result.count || categoryIds.length} category slug(s) generated/updated.`
+          );
+        },
+        error: (err: Error) =>
+          err.message || "Failed to generate slugs for selected categories.",
+      });
+    },
+    [loadCategories],
+  );
+
+  const categoryBulkActions: BulkAction<CategoryForTable>[] = useMemo(
+    () => [
+      {
+        label: "Generate Slug(s)",
+        icon: Sparkles,
+        action: handleBulkGenerateSlugsForCategories,
+      },
+      {
+        label: "Delete Selected",
+        icon: Trash2,
+        action: handleBulkDeleteCategoriesRequest,
+        isDestructive: true,
+      },
+    ],
+    [handleBulkGenerateSlugsForCategories, handleBulkDeleteCategoriesRequest],
+  );
+
   const columns: ColumnDef<CategoryForTable>[] = useMemo(
     () =>
       getCategoryColumns({ onEdit: handleEdit, onDelete: handleDeleteRequest }),
@@ -410,6 +500,7 @@ function AdminCategoriesPageClient() {
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         onResetTableConfig={handleResetTableConfig}
+        bulkActions={categoryBulkActions}
       />
 
       <Dialog
@@ -471,6 +562,36 @@ function AdminCategoriesPageClient() {
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleDeleteConfirm}>
                 Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {categoriesToBulkDelete.length > 0 && (
+        <AlertDialog
+          open={showBulkDeleteCategoriesDialog}
+          onOpenChange={setShowBulkDeleteCategoriesDialog}
+        >
+          <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Bulk Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {categoriesToBulkDelete.length}{" "}
+                categor(y/ies)? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => setShowBulkDeleteCategoriesDialog(false)}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmBulkDeleteCategories}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete {categoriesToBulkDelete.length} Categor(y/ies)
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

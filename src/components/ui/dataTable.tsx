@@ -44,6 +44,7 @@ import {
   ChevronsRight,
   XIcon,
   RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import {
   Select,
@@ -65,6 +66,13 @@ export interface DataTableFilterField<TData> {
   columnId: Extract<keyof TData, string>;
   title: string;
   options: FacetFilterOption[];
+}
+
+export interface BulkAction<TData> {
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  action: (selectedRows: Row<TData>[]) => void | Promise<void>;
+  isDestructive?: boolean; // Optional: for styling destructive actions like delete
 }
 
 interface DataTableProps<TData, TValue> {
@@ -91,6 +99,7 @@ interface DataTableProps<TData, TValue> {
     React.SetStateAction<Record<string, boolean>>
   >;
   onResetTableConfig: () => void;
+  bulkActions?: BulkAction<TData>[];
 }
 
 // --- Helper Functions ---
@@ -163,6 +172,7 @@ export function DataTable<TData, TValue>({
   rowSelection,
   onRowSelectionChange,
   onResetTableConfig,
+  bulkActions = [],
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable<TData>({
     data,
@@ -200,9 +210,9 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       {/* Toolbar: Filters + Column Visibility */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {/* Global Filter Input */}
-        <div className="relative w-full max-w-sm">
+        <div className="relative w-full max-w-xs sm:max-w-sm">
           <Input
             placeholder={filterColumnPlaceholder}
             value={globalFilter ?? ""}
@@ -226,6 +236,42 @@ export function DataTable<TData, TValue>({
             </Button>
           )}
         </div>
+
+        {/* Bulk Actions Dropdown */}
+        {bulkActions && bulkActions.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={table.getFilteredSelectedRowModel().rows.length === 0}
+              >
+                Bulk Actions ({table.getFilteredSelectedRowModel().rows.length})
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {bulkActions.map((item, index) => (
+                <DropdownMenuItem
+                  key={index}
+                  onClick={async () => {
+                    await item.action(table.getFilteredSelectedRowModel().rows);
+                    table.resetRowSelection(true); // Clear selection after action
+                  }}
+                  className={
+                    item.isDestructive
+                      ? "text-red-600 hover:!text-red-600 focus:!text-red-600 dark:text-red-500 dark:hover:!text-red-500 dark:focus:!text-red-500"
+                      : ""
+                  }
+                >
+                  {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Facet Filters Dropdowns */}
         {facetFilters.map((facet) => {

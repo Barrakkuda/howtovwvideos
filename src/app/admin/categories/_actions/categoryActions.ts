@@ -4,6 +4,35 @@ import { prisma } from "@/lib/db";
 import { categorySchema, CategoryFormData } from "@/lib/validators/category";
 import { Prisma, Category } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
+import slugify from "slugify";
+
+// Add diagnostic logging
+console.log(
+  "Prisma Client Version (from categoryActions):",
+  Prisma.prismaVersion?.client,
+);
+const categoryModelInfo = Prisma.dmmf.datamodel.models.find(
+  (m) => m.name === "Category",
+);
+if (categoryModelInfo) {
+  const slugFieldInfo = categoryModelInfo.fields.find((f) => f.name === "slug");
+  console.log(
+    "DMMF: Category model has slug field:",
+    !!slugFieldInfo,
+    slugFieldInfo?.type,
+    slugFieldInfo?.isUnique,
+  );
+} else {
+  console.log("DMMF: Category model not found.");
+}
+
+// Define return types for bulk actions (can be shared with videoActions if moved to a common types file)
+export interface BulkActionResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  count?: number;
+}
 
 export async function addCategory(formData: CategoryFormData) {
   const result = categorySchema.safeParse(formData);
@@ -157,3 +186,157 @@ export async function fetchAllCategories(): Promise<{
     };
   }
 }
+
+// --- Bulk Actions Start ---
+
+export async function bulkDeleteCategories(
+  ids: number[],
+): Promise<BulkActionResponse> {
+  if (!ids || ids.length === 0) {
+    return {
+      success: false,
+      error: "No category IDs provided for deletion.",
+      count: 0,
+    };
+  }
+
+  try {
+    const result = await prisma.category.deleteMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    revalidatePath("/admin/categories");
+    return {
+      success: true,
+      message: `${result.count} categor(y/ies) deleted successfully.`,
+      count: result.count,
+    };
+  } catch (error: unknown) {
+    console.error("Failed to bulk delete categories:", error);
+    // Check for P2003: Foreign key constraint failed (category is in use)
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return {
+        success: false,
+        error:
+          "One or more categories could not be deleted because they are still associated with videos. Please remove these associations first.",
+        count: 0,
+      };
+    }
+    return {
+      success: false,
+      error: "An error occurred while deleting categories.",
+      count: 0,
+    };
+  }
+}
+
+export async function bulkGenerateSlugsForCategories(
+  ids: number[],
+): Promise<BulkActionResponse> {
+  console.log("[bulkGenerateSlugsForCategories] Action called for IDs:", ids);
+  // Additional check inside the function, closer to the query
+  const currentCategoryModel = Prisma.dmmf.datamodel.models.find(
+    (m) => m.name === "Category",
+  );
+  if (currentCategoryModel) {
+    console.log(
+      "[bulkGenerateSlugsForCategories] DMMF fields for Category:",
+      currentCategoryModel.fields.map((f) => f.name),
+    );
+  }
+
+  if (!ids || ids.length === 0) {
+    return {
+      success: false,
+      error: "No category IDs provided for slug generation.",
+      count: 0,
+    };
+  }
+
+  let updatedCount = 0;
+  const errors: string[] = [];
+
+  for (const id of ids) {
+    let categoryNameForErrorReporting: string | null = null;
+    try {
+      const category = await prisma.category.findUnique({
+        where: { id },
+        select: { name: true, slug: true },
+      });
+      categoryNameForErrorReporting = category?.name ?? null;
+
+      if (!category) {
+        errors.push(`Category with ID ${id} not found.`);
+        continue;
+      }
+
+      if (!category.name) {
+        errors.push(
+          `Category with ID ${id} has no name, cannot generate slug.`,
+        );
+        continue;
+      }
+
+      const newSlug = slugify(category.name, { lower: true, strict: true });
+
+      await prisma.category.update({
+        where: { id },
+        data: { slug: newSlug },
+      });
+      updatedCount++;
+    } catch (error: unknown) {
+      console.error(`Failed to generate slug for category ID ${id}:`, error);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const target = error.meta?.target;
+        const isSlugConflict = Array.isArray(target)
+          ? target.includes("slug")
+          : target === "slug";
+        if (isSlugConflict) {
+          errors.push(
+            `Error for category ID ${id}: A category with the generated slug from name "${categoryNameForErrorReporting || "[unknown name]"}" already exists.`,
+          );
+        } else {
+          errors.push(
+            `Error for category ID ${id}: A unique constraint violation occurred (not necessarily on slug).`,
+          );
+        }
+      } else if (error instanceof Error) {
+        errors.push(
+          `Error processing category ID ${id}: ${error.message || "Unknown error"}`,
+        );
+      } else {
+        errors.push(
+          `Error processing category ID ${id}: Unknown error object.`,
+        );
+      }
+    }
+  }
+
+  if (updatedCount > 0) {
+    revalidatePath("/admin/categories");
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      error: `Processed ${ids.length} categories. ${updatedCount} slugs generated/updated. Errors: ${errors.join("; ")}`,
+      count: updatedCount,
+    };
+  }
+
+  return {
+    success: true,
+    message: `${updatedCount} category slug(s) generated/updated successfully.`,
+    count: updatedCount,
+  };
+}
+
+// --- Bulk Actions End ---

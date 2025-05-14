@@ -9,6 +9,15 @@ import {
   getYouTubeVideoInfo,
 } from "@/lib/services/youtube/youtubeService";
 import { analyzeTranscriptWithOpenAI as analyzeTranscriptService } from "@/lib/services/openai/openaiService";
+import slugify from "slugify";
+
+// Define return types for bulk actions
+export interface BulkActionResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  count?: number; // Generic count for deleted/updated items
+}
 
 export async function addVideo(formData: VideoFormData) {
   const result = videoSchema.safeParse(formData);
@@ -344,3 +353,131 @@ export async function refetchVideoInfo(videoId: string) {
     };
   }
 }
+
+// --- Bulk Actions Start ---
+
+export async function bulkDeleteVideos(
+  ids: number[],
+): Promise<BulkActionResponse> {
+  if (!ids || ids.length === 0) {
+    return {
+      success: false,
+      error: "No video IDs provided for deletion.",
+      count: 0,
+    };
+  }
+
+  try {
+    const result = await prisma.video.deleteMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    revalidatePath("/admin/videos");
+    return {
+      success: true,
+      message: `${result.count} video(s) deleted successfully.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("Failed to bulk delete videos:", error);
+    return {
+      success: false,
+      error: "An error occurred while deleting videos.",
+      count: 0,
+    };
+  }
+}
+
+export async function bulkGenerateSlugsForVideos(
+  ids: number[],
+): Promise<BulkActionResponse> {
+  if (!ids || ids.length === 0) {
+    return {
+      success: false,
+      error: "No video IDs provided for slug generation.",
+      count: 0,
+    };
+  }
+
+  let updatedCount = 0;
+  const errors: string[] = [];
+
+  for (const id of ids) {
+    let videoTitleForErrorReporting: string | null = null; // Variable to hold title for error reporting
+    try {
+      const video = await prisma.video.findUnique({
+        where: { id },
+        select: { title: true, slug: true },
+      });
+      videoTitleForErrorReporting = video?.title ?? null;
+
+      if (!video) {
+        errors.push(`Video with ID ${id} not found.`);
+        continue;
+      }
+
+      if (!video.title) {
+        errors.push(`Video with ID ${id} has no title, cannot generate slug.`);
+        continue;
+      }
+
+      const newSlug = slugify(video.title, { lower: true, strict: true });
+
+      await prisma.video.update({
+        where: { id },
+        data: { slug: newSlug },
+      });
+      updatedCount++;
+    } catch (error: unknown) {
+      console.error(`Failed to generate slug for video ID ${id}:`, error);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const target = error.meta?.target;
+        // Check if target is an array and includes 'slug', or if it's a string and equals 'slug'
+        const isSlugConflict = Array.isArray(target)
+          ? target.includes("slug")
+          : target === "slug";
+        if (isSlugConflict) {
+          errors.push(
+            `Error for video ID ${id}: A video with the generated slug from title "${videoTitleForErrorReporting || "[unknown title]"}" already exists.`,
+          );
+        } else {
+          // Handle other P2002 errors if necessary, or use a general message
+          errors.push(
+            `Error for video ID ${id}: A unique constraint violation occurred (not necessarily on slug).`,
+          );
+        }
+      } else if (error instanceof Error) {
+        errors.push(
+          `Error processing video ID ${id}: ${error.message || "Unknown error"}`,
+        );
+      } else {
+        errors.push(`Error processing video ID ${id}: Unknown error object.`);
+      }
+    }
+  }
+
+  if (updatedCount > 0) {
+    revalidatePath("/admin/videos");
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      error: `Processed ${ids.length} videos. ${updatedCount} slugs generated/updated. Errors: ${errors.join("; ")}`,
+      count: updatedCount,
+    };
+  }
+
+  return {
+    success: true,
+    message: `${updatedCount} video slug(s) generated/updated successfully.`,
+    count: updatedCount,
+  };
+}
+
+// --- Bulk Actions End ---

@@ -10,15 +10,15 @@ import { Metadata } from "next";
 import { VideoStatus } from "@generated/prisma"; // For checking status
 
 type Props = {
-  params: { videoId: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ videoId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 // Function to generate metadata (title, description)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const platformId = params.videoId;
+  const { videoId } = await params;
   const videoData: PublicVideoDetails | null =
-    await getVideoByPlatformId(platformId);
+    await getVideoByPlatformId(videoId);
 
   if (!videoData || videoData.status !== VideoStatus.PUBLISHED) {
     // Optionally, return metadata for a 'not found' or 'private' page
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: videoData.title,
       description: videoData.description || "",
       type: "video.other",
-      url: `https://www.howtovw.com/video/${platformId}`, // Replace with your actual domain
+      url: `https://www.howtovw.com/video/${videoId}`, // Replace with your actual domain
       images: videoData.thumbnailUrl ? [{ url: videoData.thumbnailUrl }] : [],
       // You might also want to add video-specific OpenGraph tags if your video player supports them
       // e.g., video:secure_url, video:type, video:width, video:height
@@ -47,14 +47,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PublicVideoPage({ params }: Props) {
-  const platformId = params.videoId;
+  const { videoId } = await params;
 
-  if (!platformId) {
+  if (!videoId) {
     notFound(); // Should not happen if route is [videoId]
   }
 
   const videoData: PublicVideoDetails | null =
-    await getVideoByPlatformId(platformId);
+    await getVideoByPlatformId(videoId);
 
   if (!videoData || videoData.status !== VideoStatus.PUBLISHED) {
     // Render a 'not found' or 'private video' component, or redirect

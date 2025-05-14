@@ -49,7 +49,7 @@ export default function EditVideoFormWrapper({
     ),
     status: video.status,
     platform: video.platform,
-    transcript: video.transcript,
+    transcript: video.transcript || "",
     tags: video.tags || [],
     vwTypes: video.vwTypes || [],
   };
