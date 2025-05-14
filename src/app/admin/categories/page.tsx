@@ -16,11 +16,10 @@ import {
 } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import Link from "next/link";
 import { DataTable, DataTableFilterField } from "@/components/ui/dataTable";
 import { toast } from "sonner";
-import { Category } from "@generated/prisma";
 import { fetchAllCategories, deleteCategory } from "./_actions/categoryActions";
+import type { Category as PrismaCategory } from "@generated/prisma";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -29,7 +28,6 @@ import {
   VisibilityState,
   RowSelectionState,
 } from "@tanstack/react-table";
-import { Edit, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +38,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { type CategoryForTable, getCategoryColumns } from "./columns";
+import { CategoryFormData } from "@/lib/validators/category";
+import { addCategory, updateCategory } from "./_actions/categoryActions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import CategoryForm from "@/components/admin/CategoryForm";
 
 // --- Debounce Utility ---
 function debounce<F extends (...args: Parameters<F>) => void>(
@@ -112,32 +121,25 @@ function AdminCategoriesPageClientLoader() {
   return <p className="text-center py-10">Loading categories...</p>;
 }
 
-// Define CategoryForTable if it needs to differ from Prisma Category, otherwise use Category directly
-type CategoryForTable = Category & {
-  videoCount?: number; // This will be populated from _count
-  _count?: {
-    // Optional _count property from Prisma if selected
-    videos?: number;
-  };
-};
-
 function AdminCategoriesPageClient() {
   const [categories, setCategories] = useState<CategoryForTable[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
-    null,
-  );
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<CategoryForTable | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] =
+    useState<CategoryForTable | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const defaultPageSizeForTable = 20; // Or 50, or whatever you prefer for categories
-  const initialCategoryTableFilters: ColumnFiltersState = useMemo(() => [], []); // No default filters for categories
+  const defaultPageSizeForTable = 20;
+  const initialCategoryTableFilters: ColumnFiltersState = useMemo(() => [], []);
 
-  // Table State Hooks
   const [isMounted, setIsMounted] = useState(false);
   const didHydrate = useRef(false);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -266,14 +268,16 @@ function AdminCategoriesPageClient() {
   }, [initialCategoryTableFilters, defaultPageSizeForTable]);
 
   const loadCategories = useCallback(async () => {
-    setIsLoading(true);
+    setIsDataLoading(true);
     try {
       const result = await fetchAllCategories();
       if (result.success && result.data) {
         setCategories(
-          result.data.map((cat) => ({
+          result.data.map((cat: PrismaCategory) => ({
             ...cat,
-            videoCount: (cat as CategoryForTable)._count?.videos || 0,
+            videoCount:
+              (cat as PrismaCategory & { _count: { videos: number } })._count
+                ?.videos || 0,
           })),
         );
       } else {
@@ -286,7 +290,7 @@ function AdminCategoriesPageClient() {
       setError(errorMessage);
       toast.error(`Error loading categories: ${errorMessage}`);
     } finally {
-      setIsLoading(false);
+      setIsDataLoading(false);
     }
   }, []);
 
@@ -294,101 +298,88 @@ function AdminCategoriesPageClient() {
     loadCategories();
   }, [loadCategories]);
 
+  const handleAdd = () => {
+    setEditingCategory(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = useCallback((category: CategoryForTable) => {
+    setEditingCategory(category);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleDeleteRequest = useCallback((category: CategoryForTable) => {
+    setCategoryToDelete(category);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const columns: ColumnDef<CategoryForTable>[] = useMemo(
+    () =>
+      getCategoryColumns({ onEdit: handleEdit, onDelete: handleDeleteRequest }),
+    [handleEdit, handleDeleteRequest],
+  );
+
+  const handleFormSubmit = async (formData: CategoryFormData) => {
+    setIsSubmitting(true);
+    try {
+      const result = editingCategory
+        ? await updateCategory(editingCategory.id, formData)
+        : await addCategory(formData);
+
+      if (result.success) {
+        toast.success(
+          result.message ||
+            (editingCategory ? "Category updated" : "Category added"),
+        );
+        setIsModalOpen(false);
+        setEditingCategory(null);
+        await loadCategories();
+      } else {
+        const errorMessage =
+          result.error ||
+          result.message ||
+          (editingCategory
+            ? "Failed to update category"
+            : "Failed to add category");
+        toast.error(errorMessage);
+        if ((result as { errors?: unknown[] }).errors) {
+          console.error(
+            "Validation errors:",
+            (result as { errors?: unknown[] }).errors,
+          );
+        }
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred.");
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!categoryToDelete) return;
     const result = await deleteCategory(categoryToDelete.id);
     if (result.success) {
       toast.success(
-        `Category \"${categoryToDelete.name}\" deleted successfully.`,
+        `Category "${categoryToDelete.name}" deleted successfully.`,
       );
       setCategories((prev) =>
         prev.filter((cat) => cat.id !== categoryToDelete.id),
       );
     } else {
-      // The type for deleteCategory result is { success: boolean; message: string; }
-      // So, only result.message is available for the error detail.
-      toast.error(result.message || "Failed to delete category.");
+      toast.error(result.error || "Failed to delete category.");
     }
     setShowDeleteDialog(false);
     setCategoryToDelete(null);
   };
 
-  const columns: ColumnDef<CategoryForTable>[] = useMemo(
-    () => [
-      {
-        accessorKey: "id",
-        header: "ID",
-        enableSorting: true,
-      },
-      {
-        accessorKey: "name",
-        header: "Name",
-        enableSorting: true,
-      },
-      {
-        accessorKey: "description",
-        header: "Description",
-        cell: ({ row }) => {
-          const description = row.getValue("description") as string | null;
-          return description ? (
-            <span title={description}>
-              {description.length > 50
-                ? description.substring(0, 50) + "..."
-                : description}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">N/A</span>
-          );
-        },
-      },
-      {
-        accessorKey: "videos", // Assuming you might want to show video count
-        header: "Video Count",
-        cell: ({ row }) => {
-          // This assumes 'videos' on CategoryForTable is an array of associated video IDs or objects
-          // If it's already a count (like our CategoryForTable example), use that directly.
-          const videoCount = row.original.videoCount;
-          return videoCount ?? 0;
-        },
-        enableSorting: true, // You might want to sort by video count
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              asChild // Important for Link to work correctly within Button
-            >
-              <Link href={`/admin/categories/edit/${row.original.id}`}>
-                <Edit className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                setCategoryToDelete(row.original);
-                setShowDeleteDialog(true);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [], // No external dependencies for these basic columns, add if any are used (like 'allCategories' for a dropdown filter in-column)
+  const facetFilters = useMemo(
+    (): DataTableFilterField<CategoryForTable>[] => [],
+    [],
   );
 
-  // Define facetFilters if needed, for now an empty array as categories are simple
-  const facetFilters = useMemo((): DataTableFilterField<CategoryForTable>[] => {
-    return []; // No facet filters for categories in this example
-  }, []);
-
-  if (isLoading) return <AdminCategoriesPageClientLoader />;
+  if (isDataLoading) return <AdminCategoriesPageClientLoader />;
   if (error)
     return <p className="text-center text-red-500 py-10">Error: {error}</p>;
 
@@ -396,19 +387,16 @@ function AdminCategoriesPageClient() {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold">Categories</h1>
-        <Button asChild>
-          <Link href="/admin/categories/new">
-            <PlusIcon className="mr-2 h-4 w-4" /> Add Category
-          </Link>
+        <Button onClick={handleAdd}>
+          <PlusIcon className="mr-2 h-4 w-4" /> Add Category
         </Button>
       </div>
 
       <DataTable<CategoryForTable, unknown>
-        // No key={tableKey} needed anymore
         columns={columns}
         data={categories}
         filterColumnPlaceholder="Search categories..."
-        facetFilters={facetFilters} // Pass even if empty
+        facetFilters={facetFilters}
         sorting={sorting}
         onSortingChange={setSorting}
         columnFilters={columnFilters}
@@ -424,9 +412,49 @@ function AdminCategoriesPageClient() {
         onResetTableConfig={handleResetTableConfig}
       />
 
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setEditingCategory(null);
+          }
+          setIsModalOpen(isOpen);
+        }}
+      >
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCategory ? "Edit Category" : "Add New Category"}
+            </DialogTitle>
+            {editingCategory && editingCategory.name && (
+              <DialogDescription>
+                Update details for &quot;{editingCategory.name}&quot;.
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <CategoryForm
+            initialData={
+              editingCategory
+                ? {
+                    name: editingCategory.name,
+                    description: editingCategory.description || undefined,
+                    slug: editingCategory.slug || undefined,
+                  }
+                : undefined
+            }
+            onSubmit={handleFormSubmit}
+            isSubmitting={isSubmitting}
+            onCancel={() => {
+              setIsModalOpen(false);
+              setEditingCategory(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       {categoryToDelete && (
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent className="sm:max-w-lg">
             <AlertDialogHeader>
               <AlertDialogTitle>
                 Are you sure you want to delete &quot;{categoryToDelete.name}

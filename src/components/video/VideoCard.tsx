@@ -24,7 +24,7 @@ export default function VideoCard({ video }: VideoCardProps) {
   // Determine the link for the video.
   // For now, let's assume a video detail page like /videos/[id]
   // If it's an external link, video.url might be used directly.
-  const videoLink = video.url || `/videos/${video.id}`;
+  const videoLink = video.url || `/video/${video.id}`;
 
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl">

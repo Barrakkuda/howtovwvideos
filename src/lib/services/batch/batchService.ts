@@ -7,6 +7,7 @@ import {
 } from "../youtube/youtubeService";
 import { analyzeTranscriptWithOpenAI } from "../openai/openaiService";
 import { OpenAIAnalysisResponse } from "../openai/openaiService";
+import slugify from "slugify";
 
 // Helper function to map string to VWType enum value
 function mapStringToVWType(typeString: string): VWType | undefined {
@@ -172,6 +173,10 @@ export async function batchImportVideos(
           videoCreateData.thumbnailUrl = video.thumbnailUrl;
           videoCreateData.channelTitle = video.channelTitle;
           videoCreateData.channelUrl = video.channelUrl;
+          videoCreateData.slug = slugify(video.title, {
+            lower: true,
+            strict: true,
+          });
           videoCreateData.transcript = transcriptText;
 
           // Handle categories
@@ -261,6 +266,10 @@ export async function batchImportVideos(
               create: categoryIdsToLink.map((catId) => ({
                 category: { connect: { id: catId } },
                 assignedBy: categoriesSource,
+                slug: slugify(video.title, {
+                  lower: true,
+                  strict: true,
+                }),
               })),
             };
           }

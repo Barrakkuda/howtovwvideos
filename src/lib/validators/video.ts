@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { VideoStatus, VideoPlatform, VWType } from "@generated/prisma";
+import { slugSchema } from "./commonSchemas";
 
 export const videoSchema = z.object({
   platform: z.nativeEnum(VideoPlatform),
@@ -11,6 +12,7 @@ export const videoSchema = z.object({
     .url({ message: "Invalid URL format" })
     .optional()
     .or(z.literal("")),
+  slug: slugSchema.optional().or(z.literal("")),
   thumbnailUrl: z
     .string()
     .url({ message: "Invalid URL format" })

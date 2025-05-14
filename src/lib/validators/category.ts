@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { slugSchema } from "./commonSchemas";
 
 export const categorySchema = z.object({
   name: z
@@ -9,6 +10,7 @@ export const categorySchema = z.object({
     .string()
     .max(255, "Description must be 255 characters or less")
     .optional(),
+  slug: slugSchema.optional().or(z.literal("")),
 });
 
 export type CategoryFormData = z.infer<typeof categorySchema>;

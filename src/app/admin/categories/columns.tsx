@@ -1,67 +1,24 @@
 "use client";
 
-import { ColumnDef, Row } from "@tanstack/react-table";
-import { Category } from "@generated/prisma";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
+import { Category as PrismaCategory } from "@generated/prisma";
+import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
-export type CategoryEntry = Pick<
-  Category,
-  "id" | "name" | "description" | "createdAt" | "updatedAt"
->;
-
-interface CategoryCellActionProps {
-  row: Row<CategoryEntry>;
-  onEdit: (category: CategoryEntry) => void;
-  onDelete: (category: CategoryEntry) => void;
-}
-
-export const CategoryCellActions: React.FC<CategoryCellActionProps> = ({
-  row,
-  onEdit,
-  onDelete,
-}) => {
-  const category = row.original;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => onEdit(category)}>
-          <Pencil className="mr-2 h-4 w-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => onDelete(category)}
-          className="text-red-600 hover:!text-red-600 hover:!bg-red-100 dark:hover:!bg-red-700/50 focus:!bg-red-100 dark:focus:!bg-red-700/50 focus:!text-red-600 dark:focus:!text-red-50"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+export type CategoryForTable = Pick<
+  PrismaCategory,
+  "id" | "name" | "description" | "slug" | "createdAt" | "updatedAt"
+> & {
+  videoCount: number;
 };
 
-export const getCategoryColumns = (
-  onEdit: (category: CategoryEntry) => void,
-  onDelete: (category: CategoryEntry) => void,
-): ColumnDef<CategoryEntry>[] => [
+export const getCategoryColumns = ({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: (category: CategoryForTable) => void;
+  onDelete: (category: CategoryForTable) => void;
+}): ColumnDef<CategoryForTable>[] => [
   {
     accessorKey: "id",
     header: ({ column }) => (
@@ -74,7 +31,9 @@ export const getCategoryColumns = (
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="pl-4 font-mono text-xs">{row.getValue("id")}</div>
+      <div className="w-[80px] font-mono text-xs pl-1">
+        {row.getValue("id")}
+      </div>
     ),
     enableGlobalFilter: false,
   },
@@ -90,10 +49,25 @@ export const getCategoryColumns = (
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="font-medium text-base pl-2">
+      <div className="max-w-[300px] truncate font-medium">
         {row.getValue("name") as string}
       </div>
     ),
+    enableGlobalFilter: true,
+  },
+  {
+    accessorKey: "slug",
+    header: "Slug",
+    cell: ({ row }) => {
+      const slug = row.getValue("slug") as string | null;
+      return slug ? (
+        <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+          {slug}
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground italic">N/A</span>
+      );
+    },
     enableGlobalFilter: true,
   },
   {
@@ -102,7 +76,7 @@ export const getCategoryColumns = (
     cell: ({ row }) => {
       const description = row.getValue("description") as string | null;
       return description ? (
-        <div className="text-sm text-muted-foreground truncate max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl">
+        <div className="text-sm text-muted-foreground truncate max-w-[400px]">
           {description}
         </div>
       ) : (
@@ -110,6 +84,26 @@ export const getCategoryColumns = (
       );
     },
     enableGlobalFilter: true,
+  },
+  {
+    accessorKey: "videoCount",
+    header: ({ column }) => (
+      <div className="text-center">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Videos
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="text-center tabular-nums">
+        {row.getValue("videoCount")}
+      </div>
+    ),
+    enableGlobalFilter: false,
   },
   {
     accessorKey: "createdAt",
@@ -135,21 +129,43 @@ export const getCategoryColumns = (
             day: "numeric",
           });
       return (
-        <div className="text-right tabular-nums text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground tabular-nums">
           {formatted}
-        </div>
+        </span>
       );
     },
     enableGlobalFilter: false,
   },
   {
     id: "actions",
-    header: () => <div className="text-center pr-4">Actions</div>,
-    cell: ({ row }) => (
-      <div className="text-center pr-2">
-        <CategoryCellActions row={row} onEdit={onEdit} onDelete={onDelete} />
-      </div>
-    ),
+    header: () => <div className="text-right pr-4">Actions</div>,
+    cell: ({ row }) => {
+      const category = row.original;
+      return (
+        <div className="flex items-center justify-end space-x-2 pr-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onEdit(category)}
+            title="Edit Category"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-red-600 hover:text-red-700"
+            onClick={() => onDelete(category)}
+            title="Delete Category"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete</span>
+          </Button>
+        </div>
+      );
+    },
     enableSorting: false,
     enableHiding: false,
   },

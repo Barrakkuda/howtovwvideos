@@ -63,6 +63,23 @@ export default function CategoryForm({
 
         <FormField
           control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Slug</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., engine-brakes" {...field} />
+              </FormControl>
+              <FormDescription>
+                The slug of the category (must be unique).
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>

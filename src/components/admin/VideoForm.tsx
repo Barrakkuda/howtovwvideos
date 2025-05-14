@@ -95,6 +95,7 @@ export default function VideoForm({
           title: initialData.title ?? "",
           description: initialData.description ?? "",
           url: initialData.url ?? "",
+          slug: initialData.slug ?? "",
           thumbnailUrl: initialData.thumbnailUrl ?? "",
           channelTitle: initialData.channelTitle ?? "",
           channelUrl: initialData.channelUrl ?? "",
@@ -110,6 +111,7 @@ export default function VideoForm({
           title: "",
           description: "",
           url: "",
+          slug: "",
           thumbnailUrl: "",
           channelTitle: "",
           channelUrl: "",
@@ -409,6 +411,20 @@ export default function VideoForm({
               <FormLabel>Title</FormLabel>
               <FormControl>
                 <Input placeholder="My Awesome Video" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="slug"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Slug</FormLabel>
+              <FormControl>
+                <Input placeholder="my-awesome-video" disabled {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

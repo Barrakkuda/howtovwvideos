@@ -210,6 +210,7 @@ export const columns: ColumnDef<VideoForTable>[] = [
   },
   {
     id: "actions",
+    header: () => <div className="text-right pr-4">Actions</div>,
     cell: ({ row }) => {
       const video = row.original;
 
