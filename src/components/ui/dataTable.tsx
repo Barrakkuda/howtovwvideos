@@ -1,12 +1,5 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import {
-  useRouter,
-  usePathname,
-  useSearchParams,
-  type ReadonlyURLSearchParams,
-} from "next/navigation";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -61,22 +54,6 @@ import {
 } from "@/components/ui/select"; // Import Select components
 import { PlusIcon, SlidersHorizontalIcon } from "lucide-react";
 
-// --- Debounce Utility ---
-function debounce<F extends (...args: Parameters<F>) => void>(
-  func: F,
-  delay: number,
-): (...args: Parameters<F>) => void {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<F>) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      func(...args);
-    }, delay);
-  };
-}
-
 // --- Types ---
 export interface FacetFilterOption {
   label: string;
@@ -93,56 +70,30 @@ export interface DataTableFilterField<TData> {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  localStorageKey: string;
   filterColumnPlaceholder?: string;
   facetFilters?: DataTableFilterField<TData>[];
-  initialColumnFilters?: ColumnFiltersState;
-}
-
-// Interface for the state stored in localStorage and potentially passed around
-interface PersistentTableState {
-  sorting?: SortingState;
-  columnFilters?: ColumnFiltersState;
-  pagination?: PaginationState;
-  columnVisibility?: VisibilityState;
+  sorting: SortingState;
+  onSortingChange: React.Dispatch<React.SetStateAction<SortingState>>;
+  columnFilters: ColumnFiltersState;
+  onColumnFiltersChange: React.Dispatch<
+    React.SetStateAction<ColumnFiltersState>
+  >;
+  pagination: PaginationState;
+  onPaginationChange: React.Dispatch<React.SetStateAction<PaginationState>>;
+  columnVisibility: VisibilityState;
+  onColumnVisibilityChange: React.Dispatch<
+    React.SetStateAction<VisibilityState>
+  >;
+  globalFilter: string;
+  onGlobalFilterChange: React.Dispatch<React.SetStateAction<string>>;
+  rowSelection: Record<string, boolean>;
+  onRowSelectionChange: React.Dispatch<
+    React.SetStateAction<Record<string, boolean>>
+  >;
+  onResetTableConfig: () => void;
 }
 
 // --- Helper Functions ---
-
-// Parse state from URL Search Params
-function parseUrlState(
-  searchParams: ReadonlyURLSearchParams,
-): PersistentTableState {
-  const sortField = searchParams.get("sort_field");
-  const sortDir = searchParams.get("sort_dir");
-  const sorting: SortingState =
-    sortField && sortDir ? [{ id: sortField, desc: sortDir === "desc" }] : [];
-
-  let columnFilters: ColumnFiltersState | undefined = undefined; // Initialize as undefined
-  const tempFilters: ColumnFiltersState = [];
-  searchParams.forEach((value, key) => {
-    if (key.startsWith("filter_")) {
-      const columnId = key.substring("filter_".length);
-      const filterValues = value ? value.split("-") : [];
-      if (filterValues.length > 0) {
-        tempFilters.push({ id: columnId, value: filterValues });
-      }
-    }
-  });
-
-  if (tempFilters.length > 0) {
-    columnFilters = tempFilters; // Assign only if filters were found
-  }
-
-  const pageParam = searchParams.get("page");
-  const pageIndex = pageParam ? Math.max(0, parseInt(pageParam, 10) - 1) : 0;
-
-  const sizeParam = searchParams.get("pageSize");
-  const pageSize = sizeParam ? Math.max(1, parseInt(sizeParam, 10)) : 50;
-
-  // Ensure columnFilters is part of the returned object, possibly as undefined
-  return { sorting, columnFilters, pagination: { pageIndex, pageSize } };
-}
 
 // Custom filter function for checking if a row's array value includes any of the filter values
 const arrIncludesSome: FilterFn<unknown> = <TData,>(
@@ -197,194 +148,22 @@ const arrIncludesSome: FilterFn<unknown> = <TData,>(
 export function DataTable<TData, TValue>({
   columns,
   data,
-  localStorageKey,
   filterColumnPlaceholder = "Filter...",
   facetFilters = [],
-  initialColumnFilters = [],
+  sorting,
+  onSortingChange,
+  columnFilters,
+  onColumnFiltersChange,
+  pagination,
+  onPaginationChange,
+  columnVisibility,
+  onColumnVisibilityChange,
+  globalFilter,
+  onGlobalFilterChange,
+  rowSelection,
+  onRowSelectionChange,
+  onResetTableConfig,
 }: DataTableProps<TData, TValue>) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const [isMounted, setIsMounted] = useState(false);
-  const didHydrate = useRef(false); // Ref to track hydration
-
-  // Memoize the function to get the initial state based on priority
-  const getInitialState = useCallback((): PersistentTableState => {
-    let stateFromStorage: PersistentTableState | null = null;
-    if (typeof window !== "undefined") {
-      try {
-        const storedState = localStorage.getItem(localStorageKey);
-        if (storedState) {
-          stateFromStorage = JSON.parse(storedState);
-        }
-      } catch (e) {
-        console.error("Failed to parse table state from localStorage:", e);
-      }
-    }
-
-    const stateFromUrl = parseUrlState(searchParams);
-
-    // Define default states
-    const defaultPagination: PaginationState = { pageIndex: 0, pageSize: 50 }; // CHANGED
-    const defaultSorting: SortingState = []; // Default to no sorting unless specified
-    const defaultColumnVisibility: VisibilityState = {}; // Default to all visible unless specified
-
-    // Prioritize: localStorage > URL > Props (initialColumnFilters) > Defaults
-    const resolvedSorting: SortingState =
-      stateFromStorage?.sorting ?? stateFromUrl?.sorting ?? defaultSorting;
-    const resolvedColumnFilters: ColumnFiltersState =
-      stateFromStorage?.columnFilters ??
-      stateFromUrl?.columnFilters ??
-      initialColumnFilters;
-    const resolvedPagination: PaginationState =
-      stateFromStorage?.pagination ??
-      stateFromUrl?.pagination ??
-      defaultPagination;
-    const resolvedColumnVisibility: VisibilityState =
-      stateFromStorage?.columnVisibility ?? defaultColumnVisibility; // Add visibility persistence
-
-    return {
-      sorting: resolvedSorting,
-      columnFilters: resolvedColumnFilters,
-      pagination: resolvedPagination,
-      columnVisibility: resolvedColumnVisibility,
-    };
-  }, [localStorageKey, searchParams, initialColumnFilters]);
-
-  // Initialize state hooks, run getInitialState only once initially
-  const initialComputedState = useRef(getInitialState());
-
-  const [sorting, setSorting] = useState<SortingState>(
-    initialComputedState.current.sorting ?? [],
-  );
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
-    initialComputedState.current.columnFilters ?? [],
-  );
-  const [pagination, setPagination] = useState<PaginationState>(
-    initialComputedState.current.pagination ?? { pageIndex: 0, pageSize: 50 },
-  );
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    initialComputedState.current.columnVisibility ?? {},
-  );
-  const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState(""); // State for global filter input
-
-  // --- State Synchronization Effect ---
-  // Debounced function to update localStorage and URL
-  const debouncedStateUpdate = useRef(
-    debounce(
-      (newState: PersistentTableState) => {
-        // 1. Update localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem(localStorageKey, JSON.stringify(newState));
-        }
-
-        // 2. Update URL Search Params
-        const params = new URLSearchParams(searchParams);
-
-        // Clear old params related to table state first
-        Array.from(params.keys()).forEach((key) => {
-          if (
-            key.startsWith("filter_") ||
-            key === "sort_field" ||
-            key === "sort_dir" ||
-            key === "page" ||
-            key === "pageSize"
-          ) {
-            params.delete(key);
-          }
-        });
-
-        // Set new sorting params
-        if (newState.sorting && newState.sorting.length > 0) {
-          params.set("sort_field", newState.sorting[0].id);
-          params.set("sort_dir", newState.sorting[0].desc ? "desc" : "asc");
-        }
-
-        // Set new filter params
-        if (newState.columnFilters) {
-          newState.columnFilters.forEach((filter) => {
-            if (
-              filter.value &&
-              (Array.isArray(filter.value) ? filter.value.length > 0 : true)
-            ) {
-              params.set(
-                `filter_${filter.id}`,
-                Array.isArray(filter.value)
-                  ? filter.value.join("-")
-                  : String(filter.value),
-              );
-            }
-          });
-        }
-
-        // Set new pagination params (only if not default)
-        const defaultPageSize = 50; // CHANGED
-        if (newState.pagination && newState.pagination.pageIndex > 0) {
-          params.set("page", (newState.pagination.pageIndex + 1).toString());
-        }
-        if (
-          newState.pagination &&
-          newState.pagination.pageSize !== defaultPageSize
-        ) {
-          params.set("pageSize", newState.pagination.pageSize.toString());
-        }
-
-        // Use router.replace to avoid adding to browser history
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-      },
-      500, // 500ms debounce delay
-    ),
-  ).current;
-
-  // Effect to set mounted flag
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Effect to handle initial state hydration from client-side sources (runs only once after mount)
-  useEffect(() => {
-    // Only run hydration if mounted and haven't hydrated yet
-    if (isMounted && !didHydrate.current) {
-      const clientSideInitialState = getInitialState();
-
-      // Set initial state directly
-      setSorting(clientSideInitialState.sorting ?? []);
-      setColumnFilters(clientSideInitialState.columnFilters ?? []);
-      setPagination(
-        clientSideInitialState.pagination ?? { pageIndex: 0, pageSize: 50 },
-      );
-      setColumnVisibility(clientSideInitialState.columnVisibility ?? {});
-
-      // Mark hydration as done
-      didHydrate.current = true;
-    }
-    // getInitialState is included because it's used inside, satisfying linter.
-    // The didHydrate ref prevents re-setting state even if getInitialState changes.
-  }, [isMounted, getInitialState]);
-
-  // State Synchronization Effect (runs whenever state changes *after* mount)
-  useEffect(() => {
-    // Only run sync if mounted (which implies hydration attempt has happened)
-    if (isMounted) {
-      debouncedStateUpdate({
-        sorting,
-        columnFilters,
-        pagination,
-        columnVisibility,
-      });
-    }
-  }, [
-    sorting,
-    columnFilters,
-    pagination,
-    columnVisibility,
-    debouncedStateUpdate,
-    isMounted, // Ensure sync only happens client-side after mount
-  ]);
-
-  // --- TanStack Table Instance ---
   const table = useReactTable<TData>({
     data,
     columns,
@@ -401,45 +180,22 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(), // Needed for facet filters
-    getFacetedUniqueValues: getFacetedUniqueValues(), // Needed for facet filters
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
 
     // State Change Handlers
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
-    onPaginationChange: setPagination,
+    onSortingChange: onSortingChange,
+    onColumnFiltersChange: onColumnFiltersChange,
+    onColumnVisibilityChange: onColumnVisibilityChange,
+    onRowSelectionChange: onRowSelectionChange,
+    onGlobalFilterChange: onGlobalFilterChange,
+    onPaginationChange: onPaginationChange,
 
     // Filter Functions
     filterFns: {
-      arrIncludesSome, // Register custom filter
+      arrIncludesSome,
     },
-    // globalFilterFn: 'auto', // Use default global filter (searches all columns) or provide a custom one if needed
-    // enableGlobalFilter: true, // Ensure global filtering is enabled
   });
-
-  const handleReset = () => {
-    // Clear all table state
-    setSorting([]);
-    setColumnFilters(initialColumnFilters);
-    setPagination({ pageIndex: 0, pageSize: 50 });
-    setColumnVisibility({});
-    setGlobalFilter("");
-    setRowSelection({});
-
-    // Clear localStorage
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(localStorageKey);
-    }
-  };
-
-  // --- Render Logic ---
-  // Render null or a loader until mounted to avoid hydration errors
-  if (!isMounted) {
-    return null; // Or a loading skeleton
-  }
 
   return (
     <div className="space-y-4">
@@ -450,7 +206,9 @@ export function DataTable<TData, TValue>({
           <Input
             placeholder={filterColumnPlaceholder}
             value={globalFilter ?? ""}
-            onChange={(event) => setGlobalFilter(String(event.target.value))}
+            onChange={(event) =>
+              onGlobalFilterChange(String(event.target.value))
+            }
             className="h-8 pr-8"
           />
           {globalFilter && (
@@ -460,7 +218,7 @@ export function DataTable<TData, TValue>({
               size="icon"
               className="absolute right-0 top-0 h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={() => {
-                setGlobalFilter("");
+                onGlobalFilterChange("");
               }}
             >
               <XIcon className="h-4 w-4" />
@@ -553,7 +311,7 @@ export function DataTable<TData, TValue>({
           variant="outline"
           size="sm"
           className="h-8"
-          onClick={handleReset}
+          onClick={onResetTableConfig}
         >
           <RotateCcw className="mr-2 h-4 w-4" />
           Reset

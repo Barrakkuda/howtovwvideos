@@ -89,7 +89,7 @@ async function fetchPublishedVideos({
 
 export default async function VideoGrid({
   currentPage = 1,
-  itemsPerPage = 12,
+  itemsPerPage = 16,
 }: VideoGridProps) {
   const {
     videos,

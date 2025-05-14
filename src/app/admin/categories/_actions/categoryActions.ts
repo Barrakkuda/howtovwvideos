@@ -19,7 +19,7 @@ export async function addCategory(formData: CategoryFormData) {
   const { name, description } = result.data;
 
   try {
-    await prisma.category.create({
+    const newCategory = await prisma.category.create({
       data: {
         name,
         description: description || null,
@@ -29,28 +29,24 @@ export async function addCategory(formData: CategoryFormData) {
     revalidatePath("/admin/categories");
     return {
       success: true,
+      data: newCategory,
       message: "Category added successfully!",
     };
   } catch (error) {
-    let errorMessage = "Failed to create category.";
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (
-        error.code === "P2002" &&
-        Array.isArray(error.meta?.target) &&
-        error.meta?.target.includes("name")
-      ) {
-        errorMessage = "A category with this name already exists.";
-        return {
-          success: false,
-          message: errorMessage,
-          errors: { name: [errorMessage] },
-        };
-      }
+    console.error("Error adding category:", error);
+    let errorMessage =
+      error instanceof Error ? error.message : "Failed to add category.";
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      Array.isArray(error.meta?.target) &&
+      error.meta?.target.includes("name")
+    ) {
+      errorMessage = "A category with this name already exists.";
     }
-    console.error("Failed to create category:", error);
     return {
       success: false,
-      message: errorMessage,
+      error: errorMessage,
     };
   }
 }
@@ -69,7 +65,7 @@ export async function updateCategory(id: number, formData: CategoryFormData) {
   const { name, description } = result.data;
 
   try {
-    await prisma.category.update({
+    const updatedCategory = await prisma.category.update({
       where: { id },
       data: {
         name,
@@ -80,30 +76,24 @@ export async function updateCategory(id: number, formData: CategoryFormData) {
     revalidatePath("/admin/categories");
     return {
       success: true,
+      data: updatedCategory,
       message: "Category updated successfully!",
     };
   } catch (error) {
-    let errorMessage = "Failed to update category.";
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (
-        error.code === "P2002" &&
-        Array.isArray(error.meta?.target) &&
-        error.meta?.target.includes("name")
-      ) {
-        errorMessage = "A category with this name already exists.";
-        return {
-          success: false,
-          message: errorMessage,
-          errors: { name: [errorMessage] },
-        };
-      } else if (error.code === "P2025") {
-        errorMessage = "Category not found. It may have been deleted.";
-      }
+    console.error(`Error updating category ${id}:`, error);
+    let errorMessage =
+      error instanceof Error ? error.message : "Failed to update category.";
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      Array.isArray(error.meta?.target) &&
+      error.meta?.target.includes("name")
+    ) {
+      errorMessage = "A category with this name already exists.";
     }
-    console.error(`Failed to update category with id ${id}:`, error);
     return {
       success: false,
-      message: errorMessage,
+      error: errorMessage,
     };
   }
 }
@@ -120,6 +110,7 @@ export async function deleteCategory(id: number) {
       message: "Category deleted successfully!",
     };
   } catch (error) {
+    console.error(`Error deleting category ${id}:`, error);
     let errorMessage = "Failed to delete category.";
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -133,11 +124,9 @@ export async function deleteCategory(id: number) {
       errorMessage =
         "Cannot delete category. It is still associated with one or more videos. Please remove these associations first.";
     }
-
-    console.error(`Failed to delete category with id ${id}:`, error);
     return {
       success: false,
-      message: errorMessage,
+      error: errorMessage,
     };
   }
 }
@@ -152,12 +141,19 @@ export async function fetchAllCategories(): Promise<{
       orderBy: {
         name: "asc",
       },
+      include: {
+        _count: {
+          select: { videos: true },
+        },
+      },
     });
     return { success: true, data: categories };
   } catch (error) {
-    console.error("Error fetching all categories:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to fetch categories";
-    return { success: false, error: errorMessage };
+    console.error("Error fetching categories:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to fetch categories.",
+    };
   }
 }
