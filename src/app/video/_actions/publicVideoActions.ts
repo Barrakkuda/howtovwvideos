@@ -18,14 +18,14 @@ export type PublicVideoDetails = Video & {
 };
 
 // Wrap the function with cache
-export const getVideoByPlatformId = cache(
-  async (platformVideoId: string): Promise<PublicVideoDetails | null> => {
+export const getVideoBySlug = cache(
+  async (slug: string): Promise<PublicVideoDetails | null> => {
     // Optional: Add a console.log here to observe caching behavior during development
     // console.log(`[Cache Check] Fetching video for platform ID: ${platformVideoId}`);
     try {
       const video = await prisma.video.findUnique({
         where: {
-          videoId: platformVideoId, // This is the YouTube ID / platform-specific ID
+          slug: slug, // This is the YouTube ID / platform-specific ID
           status: VideoStatus.PUBLISHED, // Only fetch published videos
         },
         include: {
@@ -46,10 +46,7 @@ export const getVideoByPlatformId = cache(
       // Prisma's include should handle this structure correctly.
       return video as PublicVideoDetails;
     } catch (error) {
-      console.error(
-        `Error fetching video by platform ID ${platformVideoId}:`,
-        error,
-      );
+      console.error(`Error fetching video by slug ${slug}:`, error);
       // In a production app, you might want to log this error to a monitoring service
       return null; // Return null on error to be handled by the page (e.g., notFound())
     }

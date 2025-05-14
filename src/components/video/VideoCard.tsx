@@ -7,7 +7,8 @@ import Link from "next/link";
 // This should be refined to match the actual data structure of your videos.
 export interface VideoCardProps {
   video: {
-    id: number | string; // Assuming video has an ID for the link
+    id: number; // Assuming video has an ID for the link
+    slug: string; // Assuming video has an ID for the link
     title: string;
     thumbnailUrl?: string | null;
     url?: string | null; // Link to the video detail page or external source
@@ -24,7 +25,7 @@ export default function VideoCard({ video }: VideoCardProps) {
   // Determine the link for the video.
   // For now, let's assume a video detail page like /videos/[id]
   // If it's an external link, video.url might be used directly.
-  const videoLink = video.url || `/video/${video.id}`;
+  const videoLink = video.url || `/video/${video.slug}`;
 
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl">

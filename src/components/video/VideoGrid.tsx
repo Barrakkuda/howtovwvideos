@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import VideoCard, { VideoCardProps } from "./VideoCard"; // Assuming VideoCardProps exports the video shape it needs
+import VideoCard from "./VideoCard"; // Assuming VideoCardProps exports the video shape it needs
 import PaginationControls from "@/components/ui/PaginationControls";
 import { VideoStatus } from "@generated/prisma";
 
@@ -17,6 +17,7 @@ interface VideoGridProps {
 // We'll refine this as we connect actual data.
 interface VideoForCardDisplay {
   id: number;
+  slug: string;
   title: string;
   thumbnailUrl?: string | null;
   url?: string | null; // For linking, can be derived if using local video pages
@@ -59,6 +60,7 @@ async function fetchPublishedVideos({
     select: {
       // Select only the fields needed for VideoForCardDisplay
       id: true,
+      slug: true,
       title: true,
       thumbnailUrl: true,
       videoId: true, // To construct URL if needed, or use a slug field
@@ -67,13 +69,15 @@ async function fetchPublishedVideos({
   });
 
   // Map to the structure VideoCard expects
-  const videos: VideoForCardDisplay[] = videosData.map((v) => ({
-    id: v.id,
-    title: v.title,
-    thumbnailUrl: v.thumbnailUrl,
-    url: `/videos/${v.id}`, // Assuming detail page structure: /videos/[id]
-    // If you have a slug: url: `/videos/${v.slug}`,
-  }));
+  const videos: VideoForCardDisplay[] = videosData
+    .filter((v) => v.slug !== null) // Filter out videos without a slug
+    .map((v) => ({
+      id: v.id,
+      slug: v.slug as string, // Slug is now guaranteed to be a string
+      title: v.title,
+      thumbnailUrl: v.thumbnailUrl,
+      url: `/video/${v.slug}`, // Construct URL with the non-null slug
+    }));
 
   const totalPages = Math.ceil(totalVideos / limit);
 
@@ -116,7 +120,7 @@ export default async function VideoGrid({
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {videos.map((video) => (
-          <VideoCard key={video.id} video={video as VideoCardProps["video"]} />
+          <VideoCard key={video.id} video={video} />
         ))}
       </div>
       <PaginationControls

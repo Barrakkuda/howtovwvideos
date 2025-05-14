@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import {
-  getVideoByPlatformId,
+  getVideoBySlug,
   PublicVideoDetails,
 } from "../_actions/publicVideoActions"; // Action to be created
 // import VideoPlayer from "@/components/public/VideoPlayer"; // Component to be created
@@ -10,15 +10,14 @@ import { Metadata } from "next";
 import { VideoStatus } from "@generated/prisma"; // For checking status
 
 type Props = {
-  params: Promise<{ videoId: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 // Function to generate metadata (title, description)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { videoId } = await params;
-  const videoData: PublicVideoDetails | null =
-    await getVideoByPlatformId(videoId);
+  const { slug } = await params;
+  const videoData: PublicVideoDetails | null = await getVideoBySlug(slug);
 
   if (!videoData || videoData.status !== VideoStatus.PUBLISHED) {
     // Optionally, return metadata for a 'not found' or 'private' page
@@ -38,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: videoData.title,
       description: videoData.description || "",
       type: "video.other",
-      url: `https://www.howtovw.com/video/${videoId}`, // Replace with your actual domain
+      url: `https://www.howtovw.com/video/${videoData.slug}`, // Replace with your actual domain
       images: videoData.thumbnailUrl ? [{ url: videoData.thumbnailUrl }] : [],
       // You might also want to add video-specific OpenGraph tags if your video player supports them
       // e.g., video:secure_url, video:type, video:width, video:height
@@ -47,14 +46,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PublicVideoPage({ params }: Props) {
-  const { videoId } = await params;
+  const { slug } = await params;
 
-  if (!videoId) {
+  if (!slug) {
     notFound(); // Should not happen if route is [videoId]
   }
 
-  const videoData: PublicVideoDetails | null =
-    await getVideoByPlatformId(videoId);
+  const videoData: PublicVideoDetails | null = await getVideoBySlug(slug);
 
   if (!videoData || videoData.status !== VideoStatus.PUBLISHED) {
     // Render a 'not found' or 'private video' component, or redirect
@@ -95,16 +93,6 @@ export default async function PublicVideoPage({ params }: Props) {
           <p className="text-gray-700 whitespace-pre-line mb-6">
             {videoData.description || "No description available."}
           </p>
-
-          {videoData.transcript && (
-            <>
-              <h2 className="text-2xl font-semibold mb-3">Transcript</h2>
-              {/* <TranscriptDisplay transcript={videoData.transcript} /> */}
-              <div className="bg-gray-50 p-4 rounded-md max-h-96 overflow-y-auto whitespace-pre-line">
-                {videoData.transcript}
-              </div>
-            </>
-          )}
         </div>
 
         <aside className="md:col-span-1">
@@ -151,12 +139,6 @@ export default async function PublicVideoPage({ params }: Props) {
                 </ul>
               </div>
             )}
-            <p>
-              <strong>DB ID:</strong> {videoData.id}
-            </p>
-            <p>
-              <strong>Platform Video ID:</strong> {videoData.videoId}
-            </p>
           </div>
         </aside>
       </div>

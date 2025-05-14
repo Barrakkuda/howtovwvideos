@@ -6,26 +6,6 @@ import { Prisma, Category } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 import slugify from "slugify";
 
-// Add diagnostic logging
-console.log(
-  "Prisma Client Version (from categoryActions):",
-  Prisma.prismaVersion?.client,
-);
-const categoryModelInfo = Prisma.dmmf.datamodel.models.find(
-  (m) => m.name === "Category",
-);
-if (categoryModelInfo) {
-  const slugFieldInfo = categoryModelInfo.fields.find((f) => f.name === "slug");
-  console.log(
-    "DMMF: Category model has slug field:",
-    !!slugFieldInfo,
-    slugFieldInfo?.type,
-    slugFieldInfo?.isUnique,
-  );
-} else {
-  console.log("DMMF: Category model not found.");
-}
-
 // Define return types for bulk actions (can be shared with videoActions if moved to a common types file)
 export interface BulkActionResponse {
   success: boolean;
