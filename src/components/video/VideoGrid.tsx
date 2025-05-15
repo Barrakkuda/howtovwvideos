@@ -52,18 +52,13 @@ async function fetchPublishedVideos({
   const whereClause: any = {
     status: VideoStatus.PUBLISHED,
     isHowToVWVideo: true, // Assuming we only want to show these on the homepage grid
-    // Add other filters based on props like searchQuery, vwType, tags here
+    slug: { not: null }, // Add slug requirement to the where clause
   };
 
   if (vwTypeSlug) {
     whereClause.vwTypes = {
       some: {
-        // Correct: a video must have 'some' related VWTypesOnVideos record where:
-        OR: [
-          // The related VWType (via VWTypesOnVideos) matches one of these conditions:
-          { vwType: { slug: vwTypeSlug } },
-          { vwType: { slug: "all" } },
-        ],
+        OR: [{ vwType: { slug: vwTypeSlug } }, { vwType: { slug: "all" } }],
       },
     };
   } else if (categorySlug) {
@@ -89,29 +84,25 @@ async function fetchPublishedVideos({
     skip: skip,
     take: limit,
     orderBy: {
-      createdAt: "desc", // Or by publication date, views, etc.
+      createdAt: "desc",
     },
     select: {
-      // Select only the fields needed for VideoForCardDisplay
       id: true,
       slug: true,
       title: true,
       thumbnailUrl: true,
-      videoId: true, // To construct URL if needed, or use a slug field
-      // channelTitle: true, // Example
+      videoId: true,
     },
   });
 
-  // Map to the structure VideoCard expects
-  const videos: VideoForCardDisplay[] = videosData
-    .filter((v) => v.slug !== null) // Filter out videos without a slug
-    .map((v) => ({
-      id: v.id,
-      slug: v.slug as string, // Slug is now guaranteed to be a string
-      title: v.title,
-      thumbnailUrl: v.thumbnailUrl,
-      url: `/video/${v.slug}`, // Construct URL with the non-null slug
-    }));
+  // Since we're filtering by slug in the query, we can safely cast it as string
+  const videos: VideoForCardDisplay[] = videosData.map((v) => ({
+    id: v.id,
+    slug: v.slug as string, // Safe to cast since we filtered in the query
+    title: v.title,
+    thumbnailUrl: v.thumbnailUrl,
+    url: `/video/${v.slug}`,
+  }));
 
   const totalPages = Math.ceil(totalVideos / limit);
 
