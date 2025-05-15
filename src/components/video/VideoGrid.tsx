@@ -26,7 +26,7 @@ interface VideoForCardDisplay {
 
 async function fetchPublishedVideos({
   page = 1,
-  limit = 12, // Default items per page
+  limit = 20, // Default items per page
 }: {
   page?: number;
   limit?: number;
@@ -93,7 +93,7 @@ async function fetchPublishedVideos({
 
 export default async function VideoGrid({
   currentPage = 1,
-  itemsPerPage = 16,
+  itemsPerPage = 20,
 }: VideoGridProps) {
   const {
     videos,

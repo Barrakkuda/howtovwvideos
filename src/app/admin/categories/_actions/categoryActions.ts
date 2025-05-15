@@ -218,18 +218,6 @@ export async function bulkDeleteCategories(
 export async function bulkGenerateSlugsForCategories(
   ids: number[],
 ): Promise<BulkActionResponse> {
-  console.log("[bulkGenerateSlugsForCategories] Action called for IDs:", ids);
-  // Additional check inside the function, closer to the query
-  const currentCategoryModel = Prisma.dmmf.datamodel.models.find(
-    (m) => m.name === "Category",
-  );
-  if (currentCategoryModel) {
-    console.log(
-      "[bulkGenerateSlugsForCategories] DMMF fields for Category:",
-      currentCategoryModel.fields.map((f) => f.name),
-    );
-  }
-
   if (!ids || ids.length === 0) {
     return {
       success: false,
@@ -320,3 +308,55 @@ export async function bulkGenerateSlugsForCategories(
 }
 
 // --- Bulk Actions End ---
+
+// --- Public Fetching Start ---
+
+export interface PublicCategory {
+  id: number;
+  name: string;
+  slug: string | null; // Slug can be null
+}
+
+export async function fetchPublicCategories(): Promise<{
+  success: boolean;
+  data?: PublicCategory[];
+  error?: string;
+}> {
+  try {
+    const categories = await prisma.category.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      orderBy: [
+        {
+          sortOrder: "asc",
+        },
+        {
+          name: "asc",
+        },
+      ],
+      // Optionally, add a where clause here if you only want to show categories
+      // that have published videos or a specific flag for public display.
+      // For example:
+      // where: {
+      //   videos: {
+      //     some: { video: { status: 'PUBLISHED' } }
+      //   }
+      // }
+    });
+    return { success: true, data: categories };
+  } catch (error) {
+    console.error("Error fetching public categories:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch public categories.",
+    };
+  }
+}
+
+// --- Public Fetching End ---

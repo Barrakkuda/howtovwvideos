@@ -19,6 +19,7 @@ model Category {
   name        String               @unique
   description String?
   slug        String?              @unique
+  sortOrder   Int                  @default(0)
   videos      CategoriesOnVideos[]
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
