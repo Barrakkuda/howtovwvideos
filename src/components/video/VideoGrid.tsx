@@ -28,7 +28,7 @@ interface VideoForCardDisplay {
 
 async function fetchPublishedVideos({
   page = 1,
-  limit = 20, // Default items per page
+  limit = 24, // Default items per page
   vwTypeSlug,
   categorySlug,
   tagSlug,
@@ -127,7 +127,7 @@ async function fetchPublishedVideos({
 
 export default async function VideoGrid({
   currentPage = 1,
-  itemsPerPage = 20,
+  itemsPerPage = 24,
   vwTypeSlug,
   categorySlug,
   tagSlug,
