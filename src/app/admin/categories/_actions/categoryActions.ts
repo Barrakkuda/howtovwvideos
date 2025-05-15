@@ -83,6 +83,7 @@ export async function updateCategory(id: number, formData: CategoryFormData) {
     });
 
     revalidatePath("/admin/categories");
+    revalidatePath(`/category/${updatedCategory.slug}`);
     return {
       success: true,
       data: updatedCategory,
@@ -114,6 +115,7 @@ export async function deleteCategory(id: number) {
     });
 
     revalidatePath("/admin/categories");
+    revalidatePath("/category");
     return {
       success: true,
       message: "Category deleted successfully!",
@@ -188,6 +190,7 @@ export async function bulkDeleteCategories(
     });
 
     revalidatePath("/admin/categories");
+    revalidatePath("/category");
     return {
       success: true,
       message: `${result.count} categor(y/ies) deleted successfully.`,
@@ -290,6 +293,7 @@ export async function bulkGenerateSlugsForCategories(
 
   if (updatedCount > 0) {
     revalidatePath("/admin/categories");
+    revalidatePath("/category");
   }
 
   if (errors.length > 0) {

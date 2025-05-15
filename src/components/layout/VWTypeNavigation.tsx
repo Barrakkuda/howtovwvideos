@@ -16,7 +16,7 @@ export default async function VWTypeNavigation() {
       {vwTypeLinks.map((item) => (
         <Link
           key={item.id} // Use id from DB as key
-          href={`/video/type/${item.slug}`} // Use slug from DB
+          href={`/type/${item.slug}`} // Use slug from DB
           className="text-sm hover:text-blue-300 transition-colors px-1 py-1 sm:px-2"
         >
           {item.name} {/* Use name from DB for label */}

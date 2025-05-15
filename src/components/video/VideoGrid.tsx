@@ -170,11 +170,11 @@ export default async function VideoGrid({
   // Determine basePath for pagination
   let basePath = "/";
   if (vwTypeSlug) {
-    basePath = `/video/type/${vwTypeSlug}`;
+    basePath = `/type/${vwTypeSlug}`;
   } else if (categorySlug) {
-    basePath = `/video/category/${categorySlug}`;
+    basePath = `/category/${categorySlug}`;
   } else if (tagSlug) {
-    basePath = `/video/tag/${tagSlug}`;
+    basePath = `/tag/${tagSlug}`;
   }
 
   return (

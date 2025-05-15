@@ -170,7 +170,7 @@ export async function addTag(
       },
     });
     revalidatePath("/admin/tags");
-    revalidatePath("/video/tag"); // Revalidate public tag listing/pages if any
+    revalidatePath("/tag"); // Revalidate public tag listing/pages if any
     return {
       success: true,
       message: "Tag added successfully!",
@@ -233,8 +233,8 @@ export async function updateTag(
     });
     revalidatePath("/admin/tags");
     revalidatePath(`/admin/tags/edit/${id}`); // Assuming an edit page exists
-    revalidatePath(`/video/tag/${updatedTag.slug}`);
-    revalidatePath(`/video/tag/${tagToUpdate.slug}`); // Revalidate old slug path if it changed
+    revalidatePath(`/tag/${updatedTag.slug}`);
+    revalidatePath(`/tag/${tagToUpdate.slug}`); // Revalidate old slug path if it changed
 
     return {
       success: true,
@@ -269,8 +269,8 @@ export async function deleteTag(id: number): Promise<ActionResponse<never>> {
 
     await prisma.tag.delete({ where: { id } });
     revalidatePath("/admin/tags");
-    revalidatePath("/video/tag");
-    revalidatePath(`/video/tag/${tagToDelete.slug}`);
+    revalidatePath("/tag");
+    revalidatePath(`/tag/${tagToDelete.slug}`);
     return { success: true, message: "Tag deleted successfully!" };
   } catch (error) {
     console.error(`Failed to delete tag with id ${id}:`, error);
@@ -290,7 +290,7 @@ export async function bulkDeleteTags(
       where: { id: { in: ids } },
     });
     revalidatePath("/admin/tags");
-    revalidatePath("/video/tag"); // Broad revalidation
+    revalidatePath("/tag"); // Broad revalidation
     return {
       success: true,
       message: `${result.count} tag(s) deleted successfully.`,
@@ -344,8 +344,8 @@ export async function bulkGenerateSlugsForTags(
         data: { slug: newSlug },
       });
       updatedCount++;
-      revalidatePath(`/video/tag/${tag.slug}`); // old slug
-      revalidatePath(`/video/tag/${newSlug}`); // new slug
+      revalidatePath(`/tag/${tag.slug}`); // old slug
+      revalidatePath(`/tag/${newSlug}`); // new slug
     } catch (error) {
       console.error(`Failed to update slug for tag ID ${id}:`, error);
       if (
@@ -365,6 +365,7 @@ export async function bulkGenerateSlugsForTags(
 
   if (updatedCount > 0) {
     revalidatePath("/admin/tags");
+    revalidatePath("/tag"); // Broad revalidation for public tag pages
   }
 
   if (errors.length > 0) {

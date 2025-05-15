@@ -37,7 +37,7 @@ export default async function PopularTags() {
         {tags.map((tag) => (
           <Link
             key={tag.id}
-            href={`/video/tag/${tag.slug}`}
+            href={`/tag/${tag.slug}`}
             className="block text-sm text-neutral-600 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400 transition-colors py-1 px-2 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700"
           >
             {tag.name}

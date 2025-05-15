@@ -141,6 +141,8 @@ export async function addVWType(
     revalidatePath("/admin/vwtypes");
     revalidatePath("/admin/videos"); // For facet filters if they use vwtypes
     revalidatePath("/"); // For public navigation
+    revalidatePath("/type"); // For public VW Type listing/pages
+    revalidatePath(`/type/${newVWType.slug}`);
     return {
       success: true,
       message: `VWType "${newVWType.name}" added successfully.`,
@@ -231,6 +233,12 @@ export async function updateVWType(
   }
 
   try {
+    const vwTypeBeforeUpdate = await prisma.vWType.findUnique({
+      where: { id },
+      select: { slug: true },
+    });
+    const originalSlug = vwTypeBeforeUpdate?.slug;
+
     const updatedVWType = await prisma.vWType.update({
       where: { id },
       data: dataToUpdate,
@@ -241,6 +249,11 @@ export async function updateVWType(
     revalidatePath("/admin/vwtypes");
     revalidatePath("/admin/videos");
     revalidatePath("/");
+    revalidatePath("/type");
+    if (originalSlug && originalSlug !== updatedVWType.slug) {
+      revalidatePath(`/type/${originalSlug}`);
+    }
+    revalidatePath(`/type/${updatedVWType.slug}`);
     return {
       success: true,
       message: `VWType "${updatedVWType.name}" updated successfully.`,
@@ -282,11 +295,20 @@ export async function deleteVWType(id: number): Promise<ActionResponse> {
     return { success: false, message: "Invalid VWType ID for deletion." };
   }
   try {
-    // onDelete: Cascade for VWTypesOnVideos relation should handle related join table entries.
+    const vwTypeToDelete = await prisma.vWType.findUnique({
+      where: { id },
+      select: { slug: true },
+    });
+    if (!vwTypeToDelete) {
+      return { success: false, message: "VWType not found for deletion." };
+    }
+
     await prisma.vWType.delete({ where: { id } });
     revalidatePath("/admin/vwtypes");
     revalidatePath("/admin/videos");
     revalidatePath("/");
+    revalidatePath("/type");
+    revalidatePath(`/type/${vwTypeToDelete.slug}`);
     return { success: true, message: "VWType deleted successfully." };
   } catch (error) {
     console.error(`Error deleting VWType with ID ${id}:`, error);
@@ -353,30 +375,46 @@ export async function bulkGenerateSlugsForVWTypes(
   const errors: string[] = [];
 
   for (const id of ids) {
+    const vwType = await prisma.vWType.findUnique({
+      where: { id },
+      select: { name: true, slug: true }, // Ensure slug is selected
+    });
+
+    if (!vwType) {
+      errors.push(`VWType with ID ${id} not found.`);
+      continue;
+    }
+    if (!vwType.name) {
+      errors.push(`VWType ID ${id} has no name, cannot generate slug.`);
+      continue;
+    }
+
+    const newSlug = slugify(vwType.name, { lower: true, strict: true });
+    const oldSlug = vwType.slug; // Capture old slug
+
+    if (newSlug === oldSlug) {
+      // Potentially skip if slug hasn't changed, or log it
+      // errors.push(`VWType ID ${id} (${vwType.name}) already has the correct slug: ${newSlug}. Skipping.`);
+      continue;
+    }
+
     try {
-      const vwType = await prisma.vWType.findUnique({
+      await prisma.vWType.update({
         where: { id },
-        select: { name: true, slug: true },
+        data: { slug: newSlug },
       });
-      if (!vwType) {
-        errors.push(`VWType with ID ${id} not found.`);
-        continue;
+      updatedCount++;
+      if (oldSlug) {
+        revalidatePath(`/type/${oldSlug}`);
       }
-      const newSlug = slugify(vwType.name, { lower: true, strict: true });
-      if (vwType.slug !== newSlug) {
-        await prisma.vWType.update({
-          where: { id },
-          data: { slug: newSlug },
-        });
-        updatedCount++;
-      }
+      revalidatePath(`/type/${newSlug}`);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
         errors.push(
-          `Could not update slug for VWType ID ${id} (name: ${ids.find((v) => v === id) /* this is wrong */}) as the generated slug likely conflicts with an existing one.`,
+          `Could not update slug for VWType ID ${id} (name: ${vwType.name}) as the generated slug likely conflicts with an existing one.`,
         );
       } else {
         errors.push(
@@ -391,8 +429,10 @@ export async function bulkGenerateSlugsForVWTypes(
     revalidatePath("/admin/vwtypes");
     revalidatePath("/admin/videos");
     revalidatePath("/");
+    revalidatePath("/type"); // Broad revalidation for public type pages
   }
 
+  // Return results
   const message = `Successfully generated/updated slugs for ${updatedCount} VWType(s).`;
   if (errors.length > 0) {
     return {
