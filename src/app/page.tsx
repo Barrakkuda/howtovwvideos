@@ -1,27 +1,19 @@
-// import Link from 'next/link'; // No longer directly used here
-import Header from "@/components/layout/Header"; // Import the new Header component
-import VideoGrid from "@/components/video/VideoGrid"; // Import the new VideoGrid component
-import Sidebar from "@/components/layout/Sidebar"; // Updated import
-// import Image from "next/image"; // Keep if used by actual components later -- Removing for now
-
-// TODO: Define or import these placeholder components
-// const SiteHeader = () => ( ... ) // Remove inline SiteHeader placeholder
+import Header from "@/components/layout/Header";
+import VideoGrid from "@/components/video/VideoGrid";
+import Sidebar from "@/components/layout/Sidebar";
+import { redirect } from "next/navigation";
 
 interface HomePageProps {
   searchParams: Promise<{ page?: string }>;
 }
 
-// Make Home an async component to await VideoGrid (which fetches data)
 export default async function Home({ searchParams }: HomePageProps) {
   const searchParamsValues = await searchParams;
   const currentPage = searchParamsValues?.page
     ? parseInt(searchParamsValues.page, 10)
     : 1;
   if (isNaN(currentPage) || currentPage < 1) {
-    // Handle invalid page number, perhaps redirect or default to 1
-    // For now, defaulting to 1 if parsing fails or it's out of bounds.
-    // Consider redirecting to a clean URL if `page` is invalid.
-    // redirect("/?page=1"); // Example, would require `redirect` from `next/navigation`
+    redirect("/?page=1");
   }
 
   return (

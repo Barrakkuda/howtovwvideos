@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import VideoCard from "./VideoCard"; // Assuming VideoCardProps exports the video shape it needs
 import PaginationControls from "@/components/ui/PaginationControls";
-import { VideoStatus } from "@generated/prisma";
+import { VideoStatus, Prisma } from "@generated/prisma";
+import { redirect } from "next/navigation";
 
 interface VideoGridProps {
   currentPage?: number;
@@ -123,13 +124,61 @@ export default async function VideoGrid({
   categorySlug,
   tagSlug,
 }: VideoGridProps) {
+  // First, fetch the total count to validate the page number
+  const whereClause: Prisma.VideoWhereInput = {
+    status: VideoStatus.PUBLISHED,
+    isHowToVWVideo: true,
+    slug: { not: null },
+  };
+
+  if (vwTypeSlug) {
+    whereClause.vwTypes = {
+      some: {
+        OR: [{ vwType: { slug: vwTypeSlug } }, { vwType: { slug: "all" } }],
+      },
+    };
+  } else if (categorySlug) {
+    whereClause.categories = {
+      some: {
+        category: { slug: categorySlug },
+      },
+    };
+  } else if (tagSlug) {
+    whereClause.tags = {
+      some: {
+        tag: { slug: tagSlug },
+      },
+    };
+  }
+
+  const totalVideos = await prisma.video.count({
+    where: whereClause,
+  });
+
+  const totalPages = Math.ceil(totalVideos / itemsPerPage);
+
+  // Validate page number
+  if (currentPage < 1 || (totalPages > 0 && currentPage > totalPages)) {
+    // Determine the base path for redirection
+    let basePath = "/";
+    if (vwTypeSlug) {
+      basePath = `/type/${vwTypeSlug}`;
+    } else if (categorySlug) {
+      basePath = `/category/${categorySlug}`;
+    } else if (tagSlug) {
+      basePath = `/tag/${tagSlug}`;
+    }
+
+    // Redirect to the first page
+    redirect(basePath);
+  }
+
+  // If we get here, the page number is valid, so fetch the videos
   const {
     videos,
-    totalPages,
-    currentPage: actualCurrentPage, // Renamed to avoid conflict with prop
+    currentPage: actualCurrentPage,
     hasNextPage,
     hasPrevPage,
-    totalVideos,
   } = await fetchPublishedVideos({
     page: currentPage,
     limit: itemsPerPage,
@@ -180,7 +229,7 @@ export default async function VideoGrid({
         totalPages={totalPages}
         hasNextPage={hasNextPage}
         hasPrevPage={hasPrevPage}
-        basePath={basePath} // Use dynamic basePath
+        basePath={basePath}
       />
     </div>
   );
