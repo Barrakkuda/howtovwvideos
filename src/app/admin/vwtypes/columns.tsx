@@ -18,7 +18,6 @@ import {
 import { deleteVWType, VWTypeForTable } from "./_actions/vwTypeActions"; // Correct path
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 
 // Define the props for the DeleteDialog if it were a separate component
 interface DeleteDialogProps {

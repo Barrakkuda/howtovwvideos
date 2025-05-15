@@ -40,8 +40,12 @@ export async function generateMetadata({
   }
   const categoryName = formatCategoryName(categoryData.name);
   return {
-    title: `${categoryName} Videos | How-To VW Videos`,
-    description: `Browse all ${categoryName} videos on How-To VW Videos.`,
+    title: `${categoryName} Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+    description: `Browse all ${categoryName} videos on ${process.env.NEXT_PUBLIC_SITE_NAME}.`,
+    openGraph: {
+      title: `${categoryName} Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+      description: `Browse all ${categoryName} videos on ${process.env.NEXT_PUBLIC_SITE_NAME}.`,
+    },
   };
 }
 

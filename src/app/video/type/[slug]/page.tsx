@@ -53,8 +53,12 @@ export async function generateMetadata({
   }
   const typeName = formatVWTypeName(vwTypeData.name);
   return {
-    title: `${typeName} Videos | How-To VW Videos`,
-    description: `Browse all ${typeName} videos on How-To VW Videos.`,
+    title: `${typeName} Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+    description: `Browse all ${typeName} videos on ${process.env.NEXT_PUBLIC_SITE_NAME}.`,
+    openGraph: {
+      title: `${typeName} Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+      description: `Browse all ${typeName} videos on ${process.env.NEXT_PUBLIC_SITE_NAME}.`,
+    },
   };
 }
 

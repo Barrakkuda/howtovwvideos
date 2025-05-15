@@ -8,6 +8,7 @@ interface VideoGridProps {
   itemsPerPage?: number;
   vwTypeSlug?: string;
   categorySlug?: string;
+  tagSlug?: string;
   // Add other filter props here later, e.g.:
   // searchQuery?: string;
   // tags?: string[];
@@ -30,11 +31,13 @@ async function fetchPublishedVideos({
   limit = 20, // Default items per page
   vwTypeSlug,
   categorySlug,
+  tagSlug,
 }: {
   page?: number;
   limit?: number;
   vwTypeSlug?: string;
   categorySlug?: string;
+  tagSlug?: string;
 }): Promise<{
   videos: VideoForCardDisplay[];
   totalPages: number;
@@ -67,6 +70,12 @@ async function fetchPublishedVideos({
     whereClause.categories = {
       some: {
         category: { slug: categorySlug },
+      },
+    };
+  } else if (tagSlug) {
+    whereClause.tags = {
+      some: {
+        tag: { slug: tagSlug },
       },
     };
   }
@@ -121,6 +130,7 @@ export default async function VideoGrid({
   itemsPerPage = 20,
   vwTypeSlug,
   categorySlug,
+  tagSlug,
 }: VideoGridProps) {
   const {
     videos,
@@ -134,6 +144,7 @@ export default async function VideoGrid({
     limit: itemsPerPage,
     vwTypeSlug,
     categorySlug,
+    tagSlug,
   });
 
   if (totalVideos === 0) {
@@ -143,6 +154,8 @@ export default async function VideoGrid({
       messageDetail = `There are currently no published videos for the type "${vwTypeSlug.replace(/-/g, " ")}".`;
     } else if (categorySlug) {
       messageDetail = `There are currently no published videos for the category "${categorySlug.replace(/-/g, " ")}".`;
+    } else if (tagSlug) {
+      messageDetail = `There are currently no published videos for the tag "${tagSlug.replace(/-/g, " ")}".`;
     }
     return (
       <div className="text-center py-12">
@@ -160,6 +173,8 @@ export default async function VideoGrid({
     basePath = `/video/type/${vwTypeSlug}`;
   } else if (categorySlug) {
     basePath = `/video/category/${categorySlug}`;
+  } else if (tagSlug) {
+    basePath = `/video/tag/${tagSlug}`;
   }
 
   return (

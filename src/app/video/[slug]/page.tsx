@@ -24,9 +24,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // Optionally, access existing metadata from parent
-  // const previousImages = (await parent).openGraph?.images || [];
-
   return {
     title: videoData.title + " | " + process.env.NEXT_PUBLIC_SITE_NAME,
     description: videoData.description || "Watch this How-To VW video.",
