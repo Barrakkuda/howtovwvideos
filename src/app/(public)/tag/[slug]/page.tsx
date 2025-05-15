@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getTagBySlug } from "@/app/tags/_actions/tagActions";
+import { getTagBySlug } from "@/app/(public)/tag/_actions/tagActions";
 import VideoGrid from "@/components/video/VideoGrid";
 // import PageHeader from "@/components/layout/PageHeader"; // Assuming you have a generic PageHeader
 

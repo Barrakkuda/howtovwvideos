@@ -43,22 +43,17 @@ export default async function PublicVideoPage({ params }: Props) {
   const { slug } = await params;
 
   if (!slug) {
-    notFound(); // Should not happen if route is [videoId]
+    notFound();
   }
 
   const videoData: PublicVideoDetails | null = await getVideoBySlug(slug);
 
   if (!videoData || videoData.status !== VideoStatus.PUBLISHED) {
-    // Render a 'not found' or 'private video' component, or redirect
-    // For now, we'll use Next.js notFound to render the nearest not-found.tsx or a default 404
     notFound();
   }
 
-  // TEMP: Display video data as JSON for now
-  // Later, replace with actual components: VideoPlayer, VideoMetadataDisplay, etc.
-
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
       <h1 className="text-3xl font-bold mb-4">{videoData.title}</h1>
 
       {/* Placeholder for Video Player */}
@@ -138,6 +133,6 @@ export default async function PublicVideoPage({ params }: Props) {
       </div>
 
       {/* TODO: Related Videos, Comments */}
-    </div>
+    </>
   );
 }

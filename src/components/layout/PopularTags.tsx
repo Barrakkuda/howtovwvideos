@@ -3,7 +3,7 @@ import { TagsIcon } from "lucide-react";
 import {
   fetchNavigationTags,
   NavigationTag,
-} from "@/app/tags/_actions/tagActions";
+} from "@/app/(public)/tag/_actions/tagActions";
 
 export default async function PopularTags() {
   const result = await fetchNavigationTags(25);
