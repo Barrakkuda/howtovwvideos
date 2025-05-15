@@ -14,13 +14,16 @@ import { Metadata } from "next"; // Import Metadata type
 async function getVWTypeBySlug(
   slug: string | undefined,
 ): Promise<VWTypeModel | null> {
-  if (!slug) return null;
+  if (!slug) {
+    return null;
+  }
   try {
     const vwType = await prisma.vWType.findUnique({
       where: { slug },
     });
     return vwType;
   } catch (error) {
+    // Preserve error logging but without the custom prefix for cleaner production logs
     console.error(`Error fetching VWType by slug '${slug}':`, error);
     return null;
   }
@@ -37,9 +40,9 @@ function formatVWTypeName(name: string): string {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>; // Explicitly type params for generateMetadata
+  params: Promise<{ slug: string }>; // Corrected type for params
 }): Promise<Metadata> {
-  const vwTypeSlug = (await params).slug;
+  const vwTypeSlug = (await params).slug; // Corrected access to slug
   const vwTypeData = await getVWTypeBySlug(vwTypeSlug);
 
   if (!vwTypeData) {
@@ -76,14 +79,22 @@ export default async function VWTypePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>; // Explicitly type params for the page component
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Explicitly type searchParams
+  params: Promise<{ slug: string }>; // Corrected type for params
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Corrected type for searchParams
 }) {
-  const vwTypeSlug = (await params).slug;
+  const vwTypeSlug = (await params).slug; // Corrected access to slug
+
+  // If the slug is "all", immediately show a 404 page as we don't want a dedicated "all" page.
+  if (vwTypeSlug === "all") {
+    notFound();
+  }
+
+  // For any other slug, proceed to fetch the VWType data.
   const vwTypeData = await getVWTypeBySlug(vwTypeSlug);
 
   if (!vwTypeData) {
-    notFound(); // If type is invalid (slug not found), show 404 page
+    // If the specific VWType (e.g., "beetle") is not found in the database, show 404.
+    notFound();
   }
 
   const pageSearchParam = (await searchParams)?.page;

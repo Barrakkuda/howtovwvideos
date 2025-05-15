@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Film, Tags, SquarePlay } from "lucide-react";
+import { LayoutDashboard, Film, Tags, SquarePlay, Car } from "lucide-react";
 
 export default function AdminSidebar() {
   return (
@@ -32,6 +32,15 @@ export default function AdminSidebar() {
             >
               <Tags className="h-5 w-5" />
               <span>Categories</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/admin/vwtypes"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
+            >
+              <Car className="h-5 w-5" />
+              <span>VW Types</span>
             </Link>
           </li>
           <li>

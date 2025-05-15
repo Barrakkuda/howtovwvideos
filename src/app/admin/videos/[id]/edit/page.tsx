@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import EditVideoFormWrapper from "@/components/admin/EditVideoFormWrapper";
 import { Metadata } from "next";
-import { fetchNavigationVWTypes } from "@/app/vwtypes/_actions/vwTypeActions";
+import { fetchNavigationVWTypes } from "@/app/admin/vwtypes/_actions/vwTypeActions";
 
 interface EditVideoPageProps {
   params: Promise<{ id: string }>;

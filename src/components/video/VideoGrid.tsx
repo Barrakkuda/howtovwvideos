@@ -50,7 +50,16 @@ async function fetchPublishedVideos({
   };
 
   if (vwTypeSlug) {
-    whereClause.vwTypes = { some: { vwType: { slug: vwTypeSlug } } };
+    whereClause.vwTypes = {
+      some: {
+        // Correct: a video must have 'some' related VWTypesOnVideos record where:
+        OR: [
+          // The related VWType (via VWTypesOnVideos) matches one of these conditions:
+          { vwType: { slug: vwTypeSlug } },
+          { vwType: { slug: "all" } },
+        ],
+      },
+    };
   }
 
   const totalVideos = await prisma.video.count({

@@ -33,7 +33,7 @@ import { fetchAllCategories } from "../categories/_actions/categoryActions";
 import {
   fetchNavigationVWTypes,
   NavigationVWType,
-} from "@/app/vwtypes/_actions/vwTypeActions";
+} from "@/app/admin/vwtypes/_actions/vwTypeActions";
 import {
   ColumnDef,
   ColumnFiltersState,

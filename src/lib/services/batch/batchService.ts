@@ -257,53 +257,61 @@ export async function batchImportVideos(
             );
           }
 
-          if (categoryIdsToLink.length > 0) {
-            // Ensure categoriesSource is set if linking
-            if (!categoriesSource) categoriesSource = "batch-import-unknown";
+          if (categoryIdsToLink.length > 0 && categoriesSource) {
             videoCreateData.categories = {
               create: categoryIdsToLink.map((catId) => ({
                 category: { connect: { id: catId } },
                 assignedBy: categoriesSource,
-                slug: slugify(video.title, {
-                  lower: true,
-                  strict: true,
-                }),
+              })),
+            };
+          } else if (uncategorizedCategoryId) {
+            // Link to "Uncategorized" if no categories were found by AI
+            videoCreateData.categories = {
+              create: [
+                {
+                  category: { connect: { id: uncategorizedCategoryId } },
+                  assignedBy: "batch-import-system-uncategorized",
+                },
+              ],
+            };
+          }
+
+          // Handle VWTypes (similar logic, ensure no erroneous fields are added)
+          const vwTypeSlugsToLink: string[] = [];
+          let vwTypesSource: string | undefined;
+
+          if (openAIAnalysis?.vwTypes && openAIAnalysis.vwTypes.length > 0) {
+            vwTypesSource = "batch-import-openai";
+            for (const nameOrSlug of openAIAnalysis.vwTypes) {
+              if (!nameOrSlug.trim()) continue;
+              // OpenAI might return name or slug, try to match slug first, then name
+              let slugToUse: string | undefined = undefined;
+              if (validVwTypeSlugs.has(nameOrSlug.toLowerCase())) {
+                slugToUse = nameOrSlug.toLowerCase();
+              } else {
+                slugToUse = vwTypeNameToSlugMap.get(nameOrSlug.toLowerCase());
+              }
+
+              if (slugToUse && !vwTypeSlugsToLink.includes(slugToUse)) {
+                vwTypeSlugsToLink.push(slugToUse);
+              }
+            }
+          }
+
+          if (vwTypeSlugsToLink.length > 0 && vwTypesSource) {
+            videoCreateData.vwTypes = {
+              create: vwTypeSlugsToLink.map((slug) => ({
+                vwType: { connect: { slug: slug } }, // Connect by slug
+                assignedBy: vwTypesSource,
               })),
             };
           }
 
-          // Handle vwTypes and tags from OpenAI analysis
-          if (openAIAnalysis?.vwTypes && openAIAnalysis.vwTypes.length > 0) {
-            const matchedVwTypeSlugs: string[] = [];
-            for (const suggestedName of openAIAnalysis.vwTypes) {
-              const foundSlug = vwTypeNameToSlugMap.get(
-                suggestedName.toLowerCase(),
-              );
-              if (foundSlug && validVwTypeSlugs.has(foundSlug)) {
-                if (!matchedVwTypeSlugs.includes(foundSlug)) {
-                  matchedVwTypeSlugs.push(foundSlug);
-                }
-              }
-              // Optionally, attempt to match suggestedName as if it *were* a slug (case-insensitive)
-              else if (validVwTypeSlugs.has(suggestedName.toLowerCase())) {
-                if (!matchedVwTypeSlugs.includes(suggestedName.toLowerCase())) {
-                  matchedVwTypeSlugs.push(suggestedName.toLowerCase());
-                }
-              }
-            }
-            if (matchedVwTypeSlugs.length > 0) {
-              videoCreateData.vwTypes = {
-                // Correct relational input
-                create: matchedVwTypeSlugs.map((slug) => ({
-                  vwType: { connect: { slug: slug } },
-                  assignedBy: "batch-import-openai",
-                })),
-              };
-            }
-          }
-
+          // Handle Tags
           if (openAIAnalysis?.tags && openAIAnalysis.tags.length > 0) {
-            videoCreateData.tags = openAIAnalysis.tags;
+            videoCreateData.tags = openAIAnalysis.tags.filter(
+              (tag) => tag && tag.trim() !== "",
+            );
           }
         }
 

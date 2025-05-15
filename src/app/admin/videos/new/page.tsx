@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import NewVideoFormWrapper from "@/components/admin/NewVideoFormWrapper";
-import { fetchNavigationVWTypes } from "@/app/vwtypes/_actions/vwTypeActions";
+import { fetchNavigationVWTypes } from "@/app/admin/vwtypes/_actions/vwTypeActions";
 
 export default async function NewVideoPage() {
   const [categories, vwTypesResult] = await Promise.all([

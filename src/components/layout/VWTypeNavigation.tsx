@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fetchNavigationVWTypes } from "@/app/vwtypes/_actions/vwTypeActions"; // Adjust path as necessary
+import { fetchNavigationVWTypes } from "@/app/admin/vwtypes/_actions/vwTypeActions"; // Adjust path as necessary
 
 export default async function VWTypeNavigation() {
   const result = await fetchNavigationVWTypes();

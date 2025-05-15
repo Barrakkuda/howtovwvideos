@@ -4,10 +4,10 @@ import { List } from "lucide-react";
 
 export default async function CategoryNavigation() {
   const result = await fetchPublicCategories();
-  console.log(
-    "[CategoryNavigation] Fetched categories result:",
-    JSON.stringify(result, null, 2),
-  );
+  // console.log(
+  //   "[CategoryNavigation] Fetched categories result:",
+  //   // JSON.stringify(result, null, 2),
+  // );
 
   if (!result.success || !result.data || result.data.length === 0) {
     console.log(
