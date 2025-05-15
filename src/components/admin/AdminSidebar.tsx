@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { LayoutDashboard, Film, Tags, SquarePlay, Car } from "lucide-react";
+import {
+  LayoutDashboard,
+  Film,
+  Tags,
+  SquarePlay,
+  Car,
+  SettingsIcon,
+} from "lucide-react";
 
 export default function AdminSidebar() {
   return (
@@ -50,6 +57,15 @@ export default function AdminSidebar() {
             >
               <SquarePlay className="h-5 w-5" />
               <span>Import YouTube</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/admin/maintenance"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
+            >
+              <SettingsIcon className="h-5 w-5" />
+              <span>Maintenance</span>
             </Link>
           </li>
         </ul>

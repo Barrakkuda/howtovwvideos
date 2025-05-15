@@ -296,3 +296,134 @@ export async function getYouTubeVideoInfo(
     };
   }
 }
+
+// Interface for the status of a single video from our new function
+export interface YouTubeVideoStatus {
+  id: string;
+  found: boolean;
+  uploadStatus?: string; // e.g., "processed", "failed", "deleted", "rejected"
+  privacyStatus?: string; // e.g., "public", "private", "unlisted"
+  embeddable?: boolean;
+  liveBroadcastContent?: string; // "none", "live", "upcoming"
+  // Add other relevant status fields if needed
+}
+
+// Define a more specific type for the status object from YouTube API's video item
+interface YouTubeApiVideoStatusObject {
+  uploadStatus: string;
+  privacyStatus: string;
+  license: string;
+  embeddable: boolean;
+  publicStatsViewable: boolean;
+  madeForKids?: boolean;
+  selfDeclaredMadeForKids?: boolean;
+  liveBroadcastContent?: string; // Added this as it's in YouTubeVideoStatus
+}
+
+// The new function to get publication statuses for multiple video IDs
+export async function getVideoPublicationStatuses(videoIds: string[]): Promise<{
+  success: boolean;
+  statuses?: YouTubeVideoStatus[];
+  error?: string;
+  quotaExceeded?: boolean;
+}> {
+  if (!YOUTUBE_API_KEY) {
+    console.error("YouTube API key is not configured.");
+    return {
+      success: false,
+      error: "YouTube API key not configured.",
+    };
+  }
+  if (!videoIds || videoIds.length === 0) {
+    return { success: true, statuses: [] }; // No IDs, no work, success.
+  }
+  if (videoIds.length > 50) {
+    // YouTube API limit for videos.list by ID is 50.
+    // This function could be enhanced to handle >50 by batching, but for now, it errors.
+    // For a robust cron job, batching would be implemented here or in the calling service.
+    console.warn(
+      "getVideoPublicationStatuses called with >50 video IDs. API limit is 50. Processing only first 50.",
+    );
+    // For simplicity in this step, we'll just slice. A real implementation would batch.
+    // videoIds = videoIds.slice(0, 50); // Or error out as below:
+    return {
+      success: false,
+      error:
+        "Cannot fetch more than 50 video statuses at once with this version. Please implement batching.",
+    };
+  }
+
+  const params = new URLSearchParams({
+    key: YOUTUBE_API_KEY,
+    id: videoIds.join(","),
+    part: "status,id", // Requesting status and id parts
+  });
+
+  const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`;
+  const results: YouTubeVideoStatus[] = [];
+
+  try {
+    const response = await fetch(fetchUrl);
+    const data = await response.json(); // Assuming youtube_v3.Schema$VideoListResponse structure
+
+    if (!response.ok) {
+      console.error(
+        "YouTube API Error (getVideoPublicationStatuses):",
+        data.error?.message || data,
+      );
+      const errorMessage =
+        data.error?.message ||
+        "An unknown error occurred with the YouTube API.";
+      const isQuotaError = data.error?.errors?.some(
+        (e: YouTubeApiError) => e.reason === "quotaExceeded",
+      );
+      return {
+        success: false,
+        error: errorMessage,
+        quotaExceeded: isQuotaError,
+      };
+    }
+
+    const statusMap = new Map<string, YouTubeApiVideoStatusObject>(); // Use the new interface
+    if (data.items && Array.isArray(data.items)) {
+      // Add Array.isArray check for robustness
+      for (const item of data.items) {
+        // item should be typed if possible, e.g., { id: string; status: YouTubeApiVideoStatusObject }
+        if (item && typeof item.id === "string" && item.status) {
+          // Ensure item.id and item.status exist
+          statusMap.set(item.id, item.status as YouTubeApiVideoStatusObject);
+        }
+      }
+    }
+
+    // Ensure all requested IDs have an entry, even if not found by API
+    for (const reqId of videoIds) {
+      const statusDetail = statusMap.get(reqId);
+      if (statusDetail) {
+        results.push({
+          id: reqId,
+          found: true,
+          uploadStatus: statusDetail.uploadStatus,
+          privacyStatus: statusDetail.privacyStatus,
+          embeddable: statusDetail.embeddable,
+          liveBroadcastContent: statusDetail.liveBroadcastContent, // This might not be on statusDetail if not on YouTubeApiVideoStatusObject
+        });
+      } else {
+        results.push({
+          id: reqId,
+          found: false, // Video ID not found in API response
+        });
+      }
+    }
+    return { success: true, statuses: results };
+  } catch (error) {
+    console.error("Failed to fetch video statuses from YouTube API:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
+    };
+  }
+}

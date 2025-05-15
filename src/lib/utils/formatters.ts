@@ -10,6 +10,8 @@ export const formatVideoStatus = (status: VideoStatus): string => {
       return "Archived";
     case VideoStatus.REJECTED:
       return "Rejected";
+    case VideoStatus.UNAVAILABLE:
+      return "Unavailable";
     default:
       // Optional: Handle unexpected status, though Prisma types should prevent this.
       // const _exhaustiveCheck: never = status;
