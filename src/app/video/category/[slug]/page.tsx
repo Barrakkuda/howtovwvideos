@@ -76,6 +76,11 @@ export default async function CategoryPage({
 }) {
   const categorySlug = (await params).slug;
 
+  // If the slug is 'uncategorized', return a 404
+  if (categorySlug === "uncategorized") {
+    notFound();
+  }
+
   // Here, decide if you want a special "all" category page and how to handle it.
   // For now, we assume all slugs correspond to actual categories.
   // If you had a category with slug "all" you wanted to exclude, you'd add:

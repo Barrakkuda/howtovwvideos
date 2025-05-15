@@ -324,27 +324,19 @@ export async function fetchPublicCategories(): Promise<{
 }> {
   try {
     const categories = await prisma.category.findMany({
+      orderBy: {
+        sortOrder: "asc",
+      },
+      where: {
+        slug: {
+          not: "uncategorized",
+        },
+      },
       select: {
         id: true,
         name: true,
         slug: true,
       },
-      orderBy: [
-        {
-          sortOrder: "asc",
-        },
-        {
-          name: "asc",
-        },
-      ],
-      // Optionally, add a where clause here if you only want to show categories
-      // that have published videos or a specific flag for public display.
-      // For example:
-      // where: {
-      //   videos: {
-      //     some: { video: { status: 'PUBLISHED' } }
-      //   }
-      // }
     });
     return { success: true, data: categories };
   } catch (error) {
