@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Category, VideoPlatform, Prisma, VWType } from "@generated/prisma";
+import { Category, VideoPlatform, Prisma } from "@generated/prisma";
 
 import VideoForm from "@/components/admin/VideoForm";
 import { updateVideo } from "@/app/admin/videos/_actions/videoActions";
@@ -13,24 +13,27 @@ type CategoriesOnVideosWithCategory = Prisma.CategoriesOnVideosGetPayload<{
   include: { category: true };
 }>;
 
-type VideoWithCategories = Prisma.VideoGetPayload<{
+type VideoWithDetails = Prisma.VideoGetPayload<{
   include: {
     categories: {
-      include: {
-        category: true;
-      };
+      include: { category: true };
+    };
+    vwTypes: {
+      include: { vwType: true };
     };
   };
 }>;
 
 interface EditVideoFormWrapperProps {
-  video: VideoWithCategories;
+  video: VideoWithDetails;
   categories: Category[];
+  availableVwTypes: { slug: string; name: string }[];
 }
 
 export default function EditVideoFormWrapper({
   video,
   categories,
+  availableVwTypes,
 }: EditVideoFormWrapperProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +54,7 @@ export default function EditVideoFormWrapper({
     platform: video.platform,
     transcript: video.transcript || "",
     tags: video.tags || [],
-    vwTypes: video.vwTypes || [],
+    vwTypes: video.vwTypes.map((vot) => vot.vwType.slug) || [],
   };
 
   async function handleSubmitVideo(data: VideoFormData) {
@@ -83,7 +86,10 @@ export default function EditVideoFormWrapper({
       <div className="lg:col-span-2">
         <VideoForm
           categories={categories}
-          vwTypeEnumValues={Object.values(VWType)}
+          vwTypeOptions={availableVwTypes.map((vt) => ({
+            label: vt.name,
+            value: vt.slug,
+          }))}
           initialData={initialFormData}
           onSubmit={handleSubmitVideo}
           isSubmitting={isSubmitting}

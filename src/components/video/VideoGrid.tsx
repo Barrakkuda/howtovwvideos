@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/db";
 import VideoCard from "./VideoCard"; // Assuming VideoCardProps exports the video shape it needs
 import PaginationControls from "@/components/ui/PaginationControls";
-import { VideoStatus, VWType } from "@generated/prisma";
+import { VideoStatus } from "@generated/prisma";
 
 interface VideoGridProps {
   currentPage?: number;
   itemsPerPage?: number;
-  vwType?: VWType;
+  vwTypeSlug?: string;
   // Add other filter props here later, e.g.:
   // searchQuery?: string;
   // tags?: string[];
@@ -27,11 +27,11 @@ interface VideoForCardDisplay {
 async function fetchPublishedVideos({
   page = 1,
   limit = 20, // Default items per page
-  vwType,
+  vwTypeSlug,
 }: {
   page?: number;
   limit?: number;
-  vwType?: VWType;
+  vwTypeSlug?: string;
 }): Promise<{
   videos: VideoForCardDisplay[];
   totalPages: number;
@@ -49,8 +49,8 @@ async function fetchPublishedVideos({
     // Add other filters based on props like searchQuery, vwType, tags here
   };
 
-  if (vwType) {
-    whereClause.vwTypes = { has: vwType };
+  if (vwTypeSlug) {
+    whereClause.vwTypes = { some: { vwType: { slug: vwTypeSlug } } };
   }
 
   const totalVideos = await prisma.video.count({
@@ -101,7 +101,7 @@ async function fetchPublishedVideos({
 export default async function VideoGrid({
   currentPage = 1,
   itemsPerPage = 20,
-  vwType,
+  vwTypeSlug,
 }: VideoGridProps) {
   const {
     videos,
@@ -113,7 +113,7 @@ export default async function VideoGrid({
   } = await fetchPublishedVideos({
     page: currentPage,
     limit: itemsPerPage,
-    vwType,
+    vwTypeSlug,
   });
 
   if (totalVideos === 0) {
@@ -121,8 +121,8 @@ export default async function VideoGrid({
       <div className="text-center py-12">
         <h2 className="text-2xl font-semibold mb-4">No Videos Found</h2>
         <p className="text-neutral-600 dark:text-neutral-400">
-          {vwType
-            ? `There are currently no published videos for the type "${vwType.toLowerCase()}".`
+          {vwTypeSlug
+            ? `There are currently no published videos for the type "${vwTypeSlug.replace(/-/g, " ")}".`
             : "There are currently no published videos matching your criteria."}
           Please check back later or try a different search.
         </p>
@@ -131,7 +131,7 @@ export default async function VideoGrid({
   }
 
   // Determine basePath for pagination
-  const basePath = vwType ? `/videos/type/${vwType.toLowerCase()}` : "/";
+  const basePath = vwTypeSlug ? `/video/type/${vwTypeSlug}` : "/";
 
   return (
     <div>

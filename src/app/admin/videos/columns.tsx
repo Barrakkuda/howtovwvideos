@@ -22,7 +22,7 @@ import { deleteVideo } from "./_actions/videoActions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { VideoForTable } from "./_actions/videoTableActions";
-import { Category, VWType } from "@generated/prisma";
+import { Category } from "@generated/prisma";
 import { formatVideoStatus } from "@/lib/utils/formatters";
 
 export const columns: ColumnDef<VideoForTable>[] = [
@@ -139,20 +139,21 @@ export const columns: ColumnDef<VideoForTable>[] = [
     accessorKey: "vwTypes",
     header: "VW Type(s)",
     cell: ({ row }) => {
-      const vwTypes = row.original.vwTypes as VWType[] | undefined;
-      if (!vwTypes?.length) {
+      const vwTypesRelation = row.original.vwTypes;
+      if (!vwTypesRelation?.length) {
         return (
           <span className="text-neutral-500 dark:text-neutral-400">N/A</span>
         );
       }
       return (
         <div className="flex flex-wrap gap-1">
-          {vwTypes.map((type) => (
-            <Badge key={type} variant="outline" className="whitespace-nowrap">
-              {String(type)
-                .toLowerCase()
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (char) => char.toUpperCase())}
+          {vwTypesRelation.map((item) => (
+            <Badge
+              key={item.vwType.id}
+              variant="outline"
+              className="whitespace-nowrap"
+            >
+              {item.vwType.name}
             </Badge>
           ))}
         </div>

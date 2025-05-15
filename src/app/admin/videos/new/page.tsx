@@ -1,10 +1,24 @@
 import { prisma } from "@/lib/db";
 import NewVideoFormWrapper from "@/components/admin/NewVideoFormWrapper";
+import { fetchNavigationVWTypes } from "@/app/vwtypes/_actions/vwTypeActions";
 
 export default async function NewVideoPage() {
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
-  });
+  const [categories, vwTypesResult] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { name: "asc" },
+    }),
+    fetchNavigationVWTypes(),
+  ]);
+
+  const availableVwTypes = vwTypesResult.success
+    ? vwTypesResult.data || []
+    : [];
+  if (!vwTypesResult.success) {
+    console.warn(
+      "NewVideoPage: Failed to fetch VW Types:",
+      vwTypesResult.error,
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -16,7 +30,10 @@ export default async function NewVideoPage() {
           Fill in the details below to add a new video.
         </p>
       </div>
-      <NewVideoFormWrapper categories={categories} />
+      <NewVideoFormWrapper
+        categories={categories}
+        availableVwTypes={availableVwTypes}
+      />
     </div>
   );
 }

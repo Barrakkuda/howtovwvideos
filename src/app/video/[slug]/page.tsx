@@ -120,8 +120,8 @@ export default async function PublicVideoPage({ params }: Props) {
               <div>
                 <strong>VW Types:</strong>
                 <ul className="list-disc list-inside ml-4">
-                  {videoData.vwTypes.map((vwType) => (
-                    <li key={vwType}>{vwType}</li>
+                  {videoData.vwTypes.map((item) => (
+                    <li key={item.vwType.id}>{item.vwType.name}</li>
                   ))}
                 </ul>
               </div>

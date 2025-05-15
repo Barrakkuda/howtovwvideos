@@ -28,8 +28,12 @@ import {
   VideoForTable,
 } from "./_actions/videoTableActions";
 import { toast } from "sonner";
-import { Category, VideoStatus, VWType } from "@generated/prisma";
+import { Category, VideoStatus } from "@generated/prisma";
 import { fetchAllCategories } from "../categories/_actions/categoryActions";
+import {
+  fetchNavigationVWTypes,
+  NavigationVWType,
+} from "@/app/vwtypes/_actions/vwTypeActions";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -55,16 +59,6 @@ import {
   bulkDeleteVideos,
   bulkGenerateSlugsForVideos,
 } from "./_actions/videoActions";
-
-// Helper to format VWType enum for display
-const formatVWType = (type: VWType): string => {
-  return String(type)
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
 
 // Debounce Utility
 function debounce<F extends (...args: Parameters<F>) => void>(
@@ -142,6 +136,7 @@ function AdminVideosPageClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [allVwTypes, setAllVwTypes] = useState<NavigationVWType[]>([]);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [videosToBulkDelete, setVideosToBulkDelete] = useState<
     Row<VideoForTable>[]
@@ -334,10 +329,9 @@ function AdminVideosPageClient() {
     console.log("AdminVideosPageClient: loadData triggered");
     setIsLoading(true);
     try {
-      const [videosResult, categoriesResult] = await Promise.all([
-        fetchVideosForTable(),
-        fetchAllCategories(),
-      ]);
+      const [videosResult, categoriesResult, vwTypesResult] = await Promise.all(
+        [fetchVideosForTable(), fetchAllCategories(), fetchNavigationVWTypes()],
+      );
 
       if (videosResult.success && videosResult.data) {
         setVideos(videosResult.data);
@@ -355,6 +349,17 @@ function AdminVideosPageClient() {
         );
         toast.warning(
           categoriesResult.error || "Failed to fetch categories for filters.",
+        );
+      }
+
+      if (vwTypesResult.success && vwTypesResult.data) {
+        setAllVwTypes(vwTypesResult.data);
+      } else {
+        console.warn(
+          vwTypesResult.error || "Failed to fetch VW Types for filters.",
+        );
+        toast.warning(
+          vwTypesResult.error || "Failed to fetch VW Types for filters.",
         );
       }
     } catch (err) {
@@ -461,9 +466,9 @@ function AdminVideosPageClient() {
       value: cat.id.toString(),
     }));
 
-    const vwTypeOptions = Object.values(VWType).map((type) => ({
-      label: formatVWType(type),
-      value: type,
+    const vwTypeOptions = allVwTypes.map((type) => ({
+      label: type.name,
+      value: type.slug,
     }));
 
     return [
@@ -483,7 +488,7 @@ function AdminVideosPageClient() {
         options: vwTypeOptions,
       },
     ];
-  }, [allCategories]);
+  }, [allCategories, allVwTypes]);
 
   if (isLoading) {
     // Use the same loader component for consistency during data fetching

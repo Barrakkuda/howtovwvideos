@@ -25,21 +25,33 @@ model Category {
   updatedAt   DateTime             @updatedAt
 }
 
+// New VWType Model
+model VWType {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  slug        String            @unique
+  description String?
+  sortOrder   Int               @default(0)
+  videos      VWTypesOnVideos[] // Relation to the join table
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
 model Video {
   id              Int                  @id @default(autoincrement())
   platform        VideoPlatform
-  videoId         String               @unique // YouTube video ID, platform-specific ID
+  videoId         String               @unique
   title           String
   description     String?
-  url             String? // Made optional, can be derived or from API
+  url             String?
   thumbnailUrl    String?
   channelTitle    String?
   channelUrl      String?
-  transcript      String? // Added field for video transcript
+  transcript      String?
   status          VideoStatus          @default(DRAFT)
   isHowToVWVideo  Boolean              @default(false)
   categories      CategoriesOnVideos[]
-  vwTypes         VWType[]
+  vwTypes         VWTypesOnVideos[] // Changed from VWType[] to relation
   tags            String[]
   slug            String?              @unique
   processingError String?
@@ -49,16 +61,27 @@ model Video {
   updatedAt       DateTime             @updatedAt
 }
 
-// New join table for Videos and Categories
 model CategoriesOnVideos {
   video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
   videoId    Int
-  category   Category @relation(fields: [categoryId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade) // Added onDelete Cascade
   categoryId Int
   assignedAt DateTime @default(now())
-  assignedBy String? // Example: "user_id" or "system"
+  assignedBy String?
 
   @@id([videoId, categoryId])
+}
+
+// New Join Table for Videos and VWTypes
+model VWTypesOnVideos {
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId    Int
+  vwType     VWType   @relation(fields: [vwTypeId], references: [id], onDelete: Cascade)
+  vwTypeId   Int
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  @@id([videoId, vwTypeId])
 }
 
 enum VideoStatus {
@@ -68,20 +91,19 @@ enum VideoStatus {
   REJECTED
 }
 
-// Define VideoPlatform enum
 enum VideoPlatform {
   YOUTUBE
   VIMEO
 }
 
-// NEW ENUM
-enum VWType {
-  BEETLE
-  GHIA
-  THING
-  BUS
-  OFF_ROAD
-  TYPE3
-  TYPE4
-  ALL
-}
+// Old VWType enum is REMOVED
+// enum VWType {
+//   BEETLE
+//   GHIA
+//   THING
+//   BUS
+//   OFF_ROAD
+//   TYPE3
+//   TYPE4
+//   ALL
+// }

@@ -1,12 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Category,
-  VideoStatus,
-  VideoPlatform,
-  VWType,
-} from "@generated/prisma";
+import { Category, VideoStatus, VideoPlatform } from "@generated/prisma";
 import { useForm, type Resolver } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -51,27 +46,15 @@ import { OpenAIAnalysisResponse } from "@/app/admin/youtube-import/_actions/impo
 
 interface VideoFormProps {
   categories: Category[];
-  vwTypeEnumValues: VWType[];
+  vwTypeOptions: { label: string; value: string }[];
   initialData?: Partial<VideoFormData>;
   onSubmit: (data: VideoFormData) => Promise<void>;
   isSubmitting: boolean;
 }
 
-// Helper function to format VWType names for display
-const formatVWTypeName = (vwType: VWType): string => {
-  if (!vwType) return "";
-
-  return vwType
-    .replace(/_/g, " ")
-    .replace(/(\D)(\d)/g, "$1 $2") // Add space between non-digit and digit like TYPE3 -> TYPE 3
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-};
-
 export default function VideoForm({
   categories,
-  vwTypeEnumValues,
+  vwTypeOptions,
   initialData,
   onSubmit,
   isSubmitting,
@@ -251,12 +234,11 @@ export default function VideoForm({
             const matchedVwTypes = suggestedVwTypes
               .map((name) => {
                 const formattedName = name.toLowerCase().replace(/\s+|-/g, "_");
-                return vwTypeEnumValues.find(
-                  (vwt) => vwt.toLowerCase() === formattedName,
-                );
+                return vwTypeOptions.find((opt) => opt.value === formattedName);
               })
               .filter(
-                (vwt): vwt is VWType => vwt !== null && vwt !== undefined,
+                (opt): opt is { label: string; value: string } =>
+                  opt !== null && opt !== undefined,
               ); // Type guard
             if (matchedVwTypes.length > 0) {
               form.setValue(
@@ -264,7 +246,7 @@ export default function VideoForm({
                 Array.from(
                   new Set([
                     ...(form.getValues("vwTypes") || []),
-                    ...matchedVwTypes,
+                    ...matchedVwTypes.map((opt) => opt.value),
                   ]),
                 ),
                 { shouldValidate: true },
@@ -525,50 +507,65 @@ export default function VideoForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>VW Types</FormLabel>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <FormControl>
+                <FormControl>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         className="w-full justify-between font-normal"
                       >
-                        {field.value && field.value.length > 0
-                          ? field.value.length === 1
-                            ? formatVWTypeName(field.value[0])
-                            : `${field.value.length} VW Types selected`
-                          : "Select VW Types"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                    <DropdownMenuLabel>Available VW Types</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {vwTypeEnumValues.map((vwType) => (
-                      <DropdownMenuCheckboxItem
-                        key={vwType}
-                        checked={field.value?.includes(vwType)}
-                        onCheckedChange={(checked) => {
-                          const currentVwTypes = field.value || [];
-                          if (checked) {
-                            field.onChange([...currentVwTypes, vwType]);
-                          } else {
-                            field.onChange(
-                              currentVwTypes.filter((vwt) => vwt !== vwType),
+                        {((): string => {
+                          if (!field.value || field.value.length === 0) {
+                            return "Select VW Types";
+                          }
+                          if (field.value.length === 1) {
+                            const selectedValue = field.value[0];
+                            return (
+                              vwTypeOptions.find(
+                                (opt) => opt.value === selectedValue,
+                              )?.label || selectedValue
                             );
                           }
-                        }}
-                      >
-                        {formatVWTypeName(vwType)}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                          return `${field.value.length} VW Types selected`;
+                        })()}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                      <DropdownMenuLabel>Available VW Types</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {vwTypeOptions.map((option) => (
+                        <DropdownMenuCheckboxItem
+                          key={option.value}
+                          checked={field.value?.includes(option.value)}
+                          onCheckedChange={(checked) => {
+                            const currentValues = field.value || [];
+                            if (checked) {
+                              field.onChange([...currentValues, option.value]);
+                            } else {
+                              field.onChange(
+                                currentValues.filter((v) => v !== option.value),
+                              );
+                            }
+                          }}
+                        >
+                          {option.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </FormControl>
                 {field.value && field.value.length > 0 && (
                   <div className="mt-2 text-sm text-muted-foreground">
                     <strong>Selected:</strong>{" "}
-                    {field.value.map(formatVWTypeName).join(", ")}
+                    {field.value
+                      .map(
+                        (val) =>
+                          vwTypeOptions.find((opt) => opt.value === val)?.label,
+                      )
+                      .filter(Boolean)
+                      .join(", ")}
                   </div>
                 )}
                 <FormMessage />

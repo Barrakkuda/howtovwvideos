@@ -3,88 +3,105 @@
 // The content of the file remains the same.
 
 import VideoGrid from "@/components/video/VideoGrid";
-import { VWType } from "@generated/prisma";
+import { prisma } from "@/lib/db"; // Import prisma client
+import { type VWType as VWTypeModel } from "@generated/prisma"; // Import the VWType model type
 import { notFound } from "next/navigation";
+import { Metadata } from "next"; // Import Metadata type
 
-interface VWTypePageProps {
-  params: { vwType: string };
-  searchParams?: { page?: string };
-}
+// Removed VWTypePageProps interface, will type props inline
 
-// Helper to validate and convert string to VWType enum
-function getValidVWType(typeString: string | undefined): VWType | undefined {
-  if (!typeString) return undefined;
-  const upperTypeString = typeString.toUpperCase();
-  if (Object.values(VWType).includes(upperTypeString as VWType)) {
-    return upperTypeString as VWType;
+// Fetch VWType by slug from the database
+async function getVWTypeBySlug(
+  slug: string | undefined,
+): Promise<VWTypeModel | null> {
+  if (!slug) return null;
+  try {
+    const vwType = await prisma.vWType.findUnique({
+      where: { slug },
+    });
+    return vwType;
+  } catch (error) {
+    console.error(`Error fetching VWType by slug '${slug}':`, error);
+    return null;
   }
-  return undefined;
 }
 
 // Helper function to format VWType names for display
-function formatVWTypeName(vwType: VWType): string {
-  switch (vwType) {
-    case VWType.OFF_ROAD:
-      return "Off-Road";
-    case VWType.TYPE3:
-      return "Type 3";
-    case VWType.TYPE4:
-      return "Type 4";
-    default:
-      // Default formatting for other types (e.g., Beetle, Ghia, Bus, Thing)
-      return vwType.charAt(0).toUpperCase() + vwType.slice(1).toLowerCase();
-  }
+function formatVWTypeName(name: string): string {
+  // The name field from the DB should already be well-formatted (e.g., "Off-Road", "Type 3")
+  // If not, specific formatting can be added here based on the name string.
+  // For now, assume names like "Beetle", "Ghia", "Off-Road", "Type 3", "Type 4" are stored directly.
+  return name;
 }
 
-export async function generateMetadata({ params }: VWTypePageProps) {
-  const vwTypeSlug = params.vwType;
-  const vwTypeEnum = getValidVWType(vwTypeSlug);
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>; // Explicitly type params for generateMetadata
+}): Promise<Metadata> {
+  const vwTypeSlug = (await params).slug;
+  const vwTypeData = await getVWTypeBySlug(vwTypeSlug);
 
-  if (!vwTypeEnum) {
+  if (!vwTypeData) {
     return {
       title: "Invalid VW Type",
       description: "The requested VW type does not exist.",
     };
   }
-  const typeName = formatVWTypeName(vwTypeEnum);
+  const typeName = formatVWTypeName(vwTypeData.name);
   return {
     title: `${typeName} Videos | How-To VW Videos`,
     description: `Browse all ${typeName} videos on How-To VW Videos.`,
   };
 }
 
-// Optional: generateStaticParams to pre-render pages for each VWType
 export async function generateStaticParams() {
-  return Object.values(VWType).map((type) => ({
-    vwType: type.toLowerCase(), // Use lowercase for URL slugs
-  }));
+  try {
+    const vwTypes = await prisma.vWType.findMany({
+      select: { slug: true },
+    });
+    return vwTypes.map((type: { slug: string }) => ({
+      slug: type.slug,
+    }));
+  } catch (error) {
+    console.error(
+      "Error fetching VWType slugs for generateStaticParams:",
+      error,
+    );
+    return [];
+  }
 }
 
 export default async function VWTypePage({
   params,
   searchParams,
-}: VWTypePageProps) {
-  const vwTypeSlug = params.vwType;
-  const vwTypeEnum = getValidVWType(vwTypeSlug);
+}: {
+  params: Promise<{ slug: string }>; // Explicitly type params for the page component
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Explicitly type searchParams
+}) {
+  const vwTypeSlug = (await params).slug;
+  const vwTypeData = await getVWTypeBySlug(vwTypeSlug);
 
-  if (!vwTypeEnum) {
-    notFound(); // If type is invalid, show 404 page
+  if (!vwTypeData) {
+    notFound(); // If type is invalid (slug not found), show 404 page
   }
 
-  const currentPage = searchParams?.page ? parseInt(searchParams.page, 10) : 1;
-  if (isNaN(currentPage) || currentPage < 1) {
-    // Handle invalid page number, perhaps redirect or default to 1
-    // For now, defaulting to 1
-  }
+  const pageSearchParam = (await searchParams)?.page;
+  const currentPage =
+    pageSearchParam && typeof pageSearchParam === "string"
+      ? parseInt(pageSearchParam, 10)
+      : 1;
+  // Basic validation for currentPage, ensure it's at least 1
+  const validCurrentPage = Math.max(1, isNaN(currentPage) ? 1 : currentPage);
 
-  const typeName = formatVWTypeName(vwTypeEnum);
+  const typeName = formatVWTypeName(vwTypeData.name);
 
   return (
     <>
       <h1 className="text-3xl font-bold mb-6 sm:mb-8">{typeName} Videos</h1>
       <VideoGrid
-        currentPage={currentPage > 0 ? currentPage : 1}
-        vwType={vwTypeEnum}
+        currentPage={validCurrentPage}
+        vwTypeSlug={vwTypeData.slug} // Pass slug to VideoGrid (VideoGrid will need update)
       />
     </>
   );

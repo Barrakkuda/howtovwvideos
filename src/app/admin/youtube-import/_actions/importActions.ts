@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { Prisma, VideoPlatform, VideoStatus, VWType } from "@generated/prisma";
+import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 
 // Import service functions
@@ -43,16 +43,6 @@ export interface ImportYouTubeVideoPayload {
   openAIAnalysisData?: OpenAIAnalysisResponse;
 }
 
-// Helper function to map string to VWType enum value
-function mapStringToVWType(typeString: string): VWType | undefined {
-  const upperTypeString = typeString.toUpperCase();
-  if (upperTypeString in VWType) {
-    return VWType[upperTypeString as keyof typeof VWType];
-  }
-  console.warn(`Unknown VWType string from OpenAI: ${typeString}`);
-  return undefined;
-}
-
 // Action to import a video into the database
 export async function importYouTubeVideo(
   payload: ImportYouTubeVideoPayload,
@@ -69,6 +59,16 @@ export async function importYouTubeVideo(
   if (!videoData || !videoData.id) {
     return { success: false, message: "Invalid video data provided." };
   }
+
+  // Fetch all existing VWType slugs for validation
+  const allDbVwTypes = await prisma.vWType.findMany({
+    select: { slug: true, name: true }, // Fetch slugs and names
+  });
+  const validVwTypeSlugs = new Set(allDbVwTypes.map((vt) => vt.slug));
+  // For matching OpenAI names to slugs, create a map:
+  const vwTypeNameToSlugMap = new Map(
+    allDbVwTypes.map((vt) => [vt.name.toLowerCase(), vt.slug]),
+  );
 
   // Validate that either categoryId or categories are provided IF it's a HowToVWVideo
   if (
@@ -200,11 +200,32 @@ export async function importYouTubeVideo(
     // Handle vwTypes and tags from OpenAI analysis if available, *only if it's a HowToVWVideo*
     if (isHowToVWVideo && openAIAnalysisData) {
       if (openAIAnalysisData.vwTypes && openAIAnalysisData.vwTypes.length > 0) {
-        const mappedVwTypes = openAIAnalysisData.vwTypes
-          .map(mapStringToVWType)
-          .filter((type): type is VWType => type !== undefined);
-        if (mappedVwTypes.length > 0) {
-          videoCreateData.vwTypes = mappedVwTypes;
+        const matchedVwTypeSlugs: string[] = [];
+        for (const suggestedName of openAIAnalysisData.vwTypes) {
+          // Attempt to match suggested name (case-insensitive) to a known VWType name, then get its slug
+          const foundSlug = vwTypeNameToSlugMap.get(
+            suggestedName.toLowerCase(),
+          );
+          if (foundSlug && validVwTypeSlugs.has(foundSlug)) {
+            if (!matchedVwTypeSlugs.includes(foundSlug)) {
+              matchedVwTypeSlugs.push(foundSlug);
+            }
+          }
+          // Optionally, attempt to match suggestedName as if it *were* a slug (case-insensitive)
+          else if (validVwTypeSlugs.has(suggestedName.toLowerCase())) {
+            if (!matchedVwTypeSlugs.includes(suggestedName.toLowerCase())) {
+              matchedVwTypeSlugs.push(suggestedName.toLowerCase());
+            }
+          }
+        }
+
+        if (matchedVwTypeSlugs.length > 0) {
+          videoCreateData.vwTypes = {
+            create: matchedVwTypeSlugs.map((slug) => ({
+              vwType: { connect: { slug: slug } },
+              assignedBy: "youtube-import-openai",
+            })),
+          };
         }
       }
 
@@ -302,13 +323,18 @@ export async function analyzeTranscriptWithOpenAI(
     });
     const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
 
-    const availableVWTypeNames = Object.values(VWType);
+    // Fetch VWType names from the database
+    const vwTypesFromDb = await prisma.vWType.findMany({
+      select: { name: true }, // Or slug: true, depending on what analyzeTranscriptService expects
+      orderBy: { name: "asc" },
+    });
+    const availableVWTypeNamesOrSlugs = vwTypesFromDb.map((type) => type.name); // Assuming service expects names
 
     // Call the actual service function with the new parameters
     return analyzeTranscriptService(
       transcript,
       existingCategoryNames,
-      availableVWTypeNames,
+      availableVWTypeNamesOrSlugs, // Pass fetched names/slugs
       videoTitle,
     );
   } catch (error) {

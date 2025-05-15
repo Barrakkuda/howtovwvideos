@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VideoStatus, VideoPlatform, VWType } from "@generated/prisma";
+import { VideoStatus, VideoPlatform } from "@generated/prisma";
 import { slugSchema } from "./commonSchemas";
 
 export const videoSchema = z.object({
@@ -30,7 +30,7 @@ export const videoSchema = z.object({
     .default([]),
   status: z.nativeEnum(VideoStatus),
   tags: z.array(z.string()).optional().default([]),
-  vwTypes: z.array(z.nativeEnum(VWType)).optional().default([]),
+  vwTypes: z.array(z.string()).optional().default([]),
   transcript: z.string().optional(),
 });
 

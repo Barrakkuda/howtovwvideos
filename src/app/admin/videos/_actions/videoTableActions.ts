@@ -1,12 +1,20 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Video, Category, CategoriesOnVideos, VWType } from "@generated/prisma";
+import {
+  Video,
+  Category,
+  CategoriesOnVideos,
+  VWType as VWTypeModel,
+  VWTypesOnVideos,
+} from "@generated/prisma";
 
 export interface VideoForTable extends Video {
   categories: (CategoriesOnVideos & {
     category: Category;
+  })[];
+  vwTypes: (VWTypesOnVideos & {
+    vwType: VWTypeModel;
   })[];
 }
 
@@ -23,6 +31,11 @@ export async function fetchVideosForTable(): Promise<FetchVideosResponse> {
         categories: {
           include: {
             category: true,
+          },
+        },
+        vwTypes: {
+          include: {
+            vwType: true,
           },
         },
       },

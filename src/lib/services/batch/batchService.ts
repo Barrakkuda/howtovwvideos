@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { Prisma, VideoPlatform, VideoStatus, VWType } from "@generated/prisma";
+import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 import {
   getYouTubeTranscript,
@@ -8,16 +8,6 @@ import {
 import { analyzeTranscriptWithOpenAI } from "../openai/openaiService";
 import { OpenAIAnalysisResponse } from "../openai/openaiService";
 import slugify from "slugify";
-
-// Helper function to map string to VWType enum value
-function mapStringToVWType(typeString: string): VWType | undefined {
-  const upperTypeString = typeString.toUpperCase();
-  if (upperTypeString in VWType) {
-    return VWType[upperTypeString as keyof typeof VWType];
-  }
-  console.warn(`Unknown VWType string from OpenAI (batch): ${typeString}`);
-  return undefined;
-}
 
 export interface BatchImportResult {
   videoId: string;
@@ -76,13 +66,21 @@ export async function batchImportVideos(
       uncategorizedCategoryId = uncategorizedCat.id;
     }
 
-    // Fetch existing category names and VWType names once before the loop
+    // Fetch existing category names and VWType data (names and slugs) once before the loop
     const categoriesFromDb = await prisma.category.findMany({
       select: { name: true },
       orderBy: { name: "asc" },
     });
     const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
-    const availableVWTypeNames = Object.values(VWType);
+
+    const allDbVwTypes = await prisma.vWType.findMany({
+      select: { name: true, slug: true },
+    });
+    const availableVWTypeNames = allDbVwTypes.map((vt) => vt.name); // For analyzeTranscriptWithOpenAI
+    const validVwTypeSlugs = new Set(allDbVwTypes.map((vt) => vt.slug));
+    const vwTypeNameToSlugMap = new Map(
+      allDbVwTypes.map((vt) => [vt.name.toLowerCase(), vt.slug]),
+    );
 
     // Search for videos
     const searchResponse = await searchYouTubeVideos(searchQuery, maxResults);
@@ -127,7 +125,7 @@ export async function batchImportVideos(
           const analysisResult = await analyzeTranscriptWithOpenAI(
             transcriptText,
             existingCategoryNames,
-            availableVWTypeNames,
+            availableVWTypeNames, // Pass fetched names
             video.title,
           );
           if (analysisResult.success && analysisResult.data) {
@@ -276,11 +274,31 @@ export async function batchImportVideos(
 
           // Handle vwTypes and tags from OpenAI analysis
           if (openAIAnalysis?.vwTypes && openAIAnalysis.vwTypes.length > 0) {
-            const mappedVwTypes = openAIAnalysis.vwTypes
-              .map(mapStringToVWType)
-              .filter((type): type is VWType => type !== undefined);
-            if (mappedVwTypes.length > 0) {
-              videoCreateData.vwTypes = mappedVwTypes;
+            const matchedVwTypeSlugs: string[] = [];
+            for (const suggestedName of openAIAnalysis.vwTypes) {
+              const foundSlug = vwTypeNameToSlugMap.get(
+                suggestedName.toLowerCase(),
+              );
+              if (foundSlug && validVwTypeSlugs.has(foundSlug)) {
+                if (!matchedVwTypeSlugs.includes(foundSlug)) {
+                  matchedVwTypeSlugs.push(foundSlug);
+                }
+              }
+              // Optionally, attempt to match suggestedName as if it *were* a slug (case-insensitive)
+              else if (validVwTypeSlugs.has(suggestedName.toLowerCase())) {
+                if (!matchedVwTypeSlugs.includes(suggestedName.toLowerCase())) {
+                  matchedVwTypeSlugs.push(suggestedName.toLowerCase());
+                }
+              }
+            }
+            if (matchedVwTypeSlugs.length > 0) {
+              videoCreateData.vwTypes = {
+                // Correct relational input
+                create: matchedVwTypeSlugs.map((slug) => ({
+                  vwType: { connect: { slug: slug } },
+                  assignedBy: "batch-import-openai",
+                })),
+              };
             }
           }
 

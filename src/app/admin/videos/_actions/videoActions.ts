@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
-import { VideoStatus, VideoPlatform, Prisma, VWType } from "@generated/prisma";
+import { VideoStatus, VideoPlatform, Prisma } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
 import {
   getYouTubeTranscript as getTranscriptService,
@@ -46,7 +46,17 @@ export async function addVideo(formData: VideoFormData) {
         transcript: data.transcript,
         status: data.status as VideoStatus,
         tags: data.tags,
-        vwTypes: data.vwTypes as VWType[] | undefined,
+        vwTypes:
+          data.vwTypes && data.vwTypes.length > 0
+            ? {
+                create: data.vwTypes.map((slug) => ({
+                  assignedBy: "user-form",
+                  vwType: {
+                    connect: { slug: slug },
+                  },
+                })),
+              }
+            : undefined,
         categories: {
           create: data.categoryIds.map((catId) => ({
             category: { connect: { id: catId } },
@@ -133,7 +143,12 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         where: { videoId: id },
       });
 
-      // 2. Prepare the video update data, excluding categories for now
+      // 1.5. Disconnect all existing VWTypes for this video
+      await tx.vWTypesOnVideos.deleteMany({
+        where: { videoId: id },
+      });
+
+      // 2. Prepare the video update data, excluding categories and vwTypes for now
       const videoUpdateData: Prisma.VideoUpdateInput = {
         platform: data.platform as VideoPlatform,
         videoId: data.videoId as string,
@@ -146,7 +161,6 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         transcript: data.transcript,
         status: data.status as VideoStatus,
         tags: data.tags,
-        vwTypes: data.vwTypes as VWType[] | undefined,
         isHowToVWVideo:
           data.status === VideoStatus.PUBLISHED ? true : undefined,
       };
@@ -161,7 +175,17 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         };
       }
 
-      // 4. Update the video with new data and new category connections
+      // 3.5 If new vwTypes are provided, add them to the update data
+      if (data.vwTypes && data.vwTypes.length > 0) {
+        videoUpdateData.vwTypes = {
+          create: data.vwTypes.map((slug) => ({
+            assignedBy: "user-form-update",
+            vwType: { connect: { slug: slug } },
+          })),
+        };
+      }
+
+      // 4. Update the video with new data and new category/vwType connections
       await tx.video.update({
         where: { id },
         data: videoUpdateData,
@@ -280,7 +304,13 @@ export async function analyzeVideoWithOpenAI(
       orderBy: { name: "asc" },
     });
     const existingCategoryNames = categoriesFromDb.map((cat) => cat.name);
-    const availableVWTypeNames = Object.values(VWType);
+
+    // Fetch VWType names from the database
+    const vwTypesFromDb = await prisma.vWType.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" }, // or sortOrder, then name if preferred
+    });
+    const availableVWTypeNames = vwTypesFromDb.map((type) => type.name);
 
     const analysisResponse = await analyzeTranscriptService(
       transcript,

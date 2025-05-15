@@ -6,6 +6,8 @@ import {
   Video,
   Category,
   CategoriesOnVideos,
+  VWType as VWTypeModel,
+  VWTypesOnVideos,
 } from "@generated/prisma";
 import { cache } from "react";
 
@@ -14,7 +16,10 @@ export type PublicVideoDetails = Video & {
   categories: (CategoriesOnVideos & {
     category: Category;
   })[];
-  // vwTypes and tags are already part of the Video model as VWType[] and string[]
+  vwTypes: (VWTypesOnVideos & {
+    vwType: VWTypeModel;
+  })[];
+  // tags are already part of the Video model as string[]
 };
 
 // Wrap the function with cache
@@ -32,6 +37,11 @@ export const getVideoBySlug = cache(
           categories: {
             include: {
               category: true, // Include the full category object
+            },
+          },
+          vwTypes: {
+            include: {
+              vwType: true,
             },
           },
           // VWTypes and tags are directly on the video model
