@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/db";
 import VideoCard from "./VideoCard"; // Assuming VideoCardProps exports the video shape it needs
 import PaginationControls from "@/components/ui/PaginationControls";
-import { VideoStatus } from "@generated/prisma";
+import { VideoStatus, VWType } from "@generated/prisma";
 
 interface VideoGridProps {
   currentPage?: number;
   itemsPerPage?: number;
+  vwType?: VWType;
   // Add other filter props here later, e.g.:
   // searchQuery?: string;
-  // vwType?: string;
   // tags?: string[];
 }
 
@@ -27,9 +27,11 @@ interface VideoForCardDisplay {
 async function fetchPublishedVideos({
   page = 1,
   limit = 20, // Default items per page
+  vwType,
 }: {
   page?: number;
   limit?: number;
+  vwType?: VWType;
 }): Promise<{
   videos: VideoForCardDisplay[];
   totalPages: number;
@@ -40,11 +42,16 @@ async function fetchPublishedVideos({
 }> {
   const skip = (page - 1) * limit;
 
-  const whereClause = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const whereClause: any = {
     status: VideoStatus.PUBLISHED,
     isHowToVWVideo: true, // Assuming we only want to show these on the homepage grid
     // Add other filters based on props like searchQuery, vwType, tags here
   };
+
+  if (vwType) {
+    whereClause.vwTypes = { has: vwType };
+  }
 
   const totalVideos = await prisma.video.count({
     where: whereClause,
@@ -94,6 +101,7 @@ async function fetchPublishedVideos({
 export default async function VideoGrid({
   currentPage = 1,
   itemsPerPage = 20,
+  vwType,
 }: VideoGridProps) {
   const {
     videos,
@@ -102,19 +110,28 @@ export default async function VideoGrid({
     hasNextPage,
     hasPrevPage,
     totalVideos,
-  } = await fetchPublishedVideos({ page: currentPage, limit: itemsPerPage });
+  } = await fetchPublishedVideos({
+    page: currentPage,
+    limit: itemsPerPage,
+    vwType,
+  });
 
   if (totalVideos === 0) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-semibold mb-4">No Videos Found</h2>
         <p className="text-neutral-600 dark:text-neutral-400">
-          There are currently no published videos matching your criteria. Please
-          check back later or try a different search.
+          {vwType
+            ? `There are currently no published videos for the type "${vwType.toLowerCase()}".`
+            : "There are currently no published videos matching your criteria."}
+          Please check back later or try a different search.
         </p>
       </div>
     );
   }
+
+  // Determine basePath for pagination
+  const basePath = vwType ? `/videos/type/${vwType.toLowerCase()}` : "/";
 
   return (
     <div>
@@ -128,7 +145,7 @@ export default async function VideoGrid({
         totalPages={totalPages}
         hasNextPage={hasNextPage}
         hasPrevPage={hasPrevPage}
-        basePath="/" // Or the relevant base path for the homepage/video listing
+        basePath={basePath} // Use dynamic basePath
       />
     </div>
   );

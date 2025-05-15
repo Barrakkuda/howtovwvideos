@@ -28,7 +28,7 @@ export default function Header() {
           {vwTypeNavigationLinks.map((item) => (
             <Link
               key={item.value}
-              href={`/videos?type=${item.value}`}
+              href={`/video/type/${item.value.toLowerCase()}`}
               className="text-sm hover:text-blue-300 transition-colors px-1 py-1 sm:px-2"
             >
               {item.label}
