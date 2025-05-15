@@ -7,6 +7,7 @@ interface VideoGridProps {
   currentPage?: number;
   itemsPerPage?: number;
   vwTypeSlug?: string;
+  categorySlug?: string;
   // Add other filter props here later, e.g.:
   // searchQuery?: string;
   // tags?: string[];
@@ -28,10 +29,12 @@ async function fetchPublishedVideos({
   page = 1,
   limit = 20, // Default items per page
   vwTypeSlug,
+  categorySlug,
 }: {
   page?: number;
   limit?: number;
   vwTypeSlug?: string;
+  categorySlug?: string;
 }): Promise<{
   videos: VideoForCardDisplay[];
   totalPages: number;
@@ -58,6 +61,12 @@ async function fetchPublishedVideos({
           { vwType: { slug: vwTypeSlug } },
           { vwType: { slug: "all" } },
         ],
+      },
+    };
+  } else if (categorySlug) {
+    whereClause.categories = {
+      some: {
+        category: { slug: categorySlug },
       },
     };
   }
@@ -111,6 +120,7 @@ export default async function VideoGrid({
   currentPage = 1,
   itemsPerPage = 20,
   vwTypeSlug,
+  categorySlug,
 }: VideoGridProps) {
   const {
     videos,
@@ -123,24 +133,34 @@ export default async function VideoGrid({
     page: currentPage,
     limit: itemsPerPage,
     vwTypeSlug,
+    categorySlug,
   });
 
   if (totalVideos === 0) {
+    let messageDetail =
+      "There are currently no published videos matching your criteria.";
+    if (vwTypeSlug) {
+      messageDetail = `There are currently no published videos for the type "${vwTypeSlug.replace(/-/g, " ")}".`;
+    } else if (categorySlug) {
+      messageDetail = `There are currently no published videos for the category "${categorySlug.replace(/-/g, " ")}".`;
+    }
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-semibold mb-4">No Videos Found</h2>
         <p className="text-neutral-600 dark:text-neutral-400">
-          {vwTypeSlug
-            ? `There are currently no published videos for the type "${vwTypeSlug.replace(/-/g, " ")}".`
-            : "There are currently no published videos matching your criteria."}
-          Please check back later or try a different search.
+          {messageDetail} Please check back later or try a different search.
         </p>
       </div>
     );
   }
 
   // Determine basePath for pagination
-  const basePath = vwTypeSlug ? `/video/type/${vwTypeSlug}` : "/";
+  let basePath = "/";
+  if (vwTypeSlug) {
+    basePath = `/video/type/${vwTypeSlug}`;
+  } else if (categorySlug) {
+    basePath = `/video/category/${categorySlug}`;
+  }
 
   return (
     <div>

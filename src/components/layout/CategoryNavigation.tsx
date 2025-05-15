@@ -43,7 +43,7 @@ export default async function CategoryNavigation() {
             return (
               <li key={category.id}>
                 <Link
-                  href={`/videos?category=${category.slug}`}
+                  href={`/video/category/${category.slug}`}
                   className="block text-sm text-neutral-600 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400 transition-colors py-1 px-2 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 >
                   {category.name}

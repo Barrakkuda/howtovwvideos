@@ -128,8 +128,6 @@ export default function AdminMaintenancePage() {
           </CardFooter>
         )}
       </Card>
-
-      {/* Add more maintenance tasks here as cards if needed */}
     </>
   );
 }
