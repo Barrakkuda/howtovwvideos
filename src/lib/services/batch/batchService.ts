@@ -308,10 +308,44 @@ export async function batchImportVideos(
           }
 
           // Handle Tags
-          if (openAIAnalysis?.tags && openAIAnalysis.tags.length > 0) {
-            videoCreateData.tags = openAIAnalysis.tags.filter(
-              (tag) => tag && tag.trim() !== "",
-            );
+          if (
+            isHowToVWVideoFromAnalysis &&
+            openAIAnalysis?.tags &&
+            openAIAnalysis.tags.length > 0
+          ) {
+            const tagIdsToConnect: number[] = [];
+            for (const tagName of openAIAnalysis.tags) {
+              if (!tagName || !tagName.trim()) continue;
+              const normalizedTagName = tagName.trim();
+              const tagSlug = slugify(normalizedTagName, {
+                lower: true,
+                strict: true,
+              });
+
+              try {
+                const tag = await prisma.tag.upsert({
+                  where: { slug: tagSlug },
+                  create: { name: normalizedTagName, slug: tagSlug },
+                  update: {},
+                });
+                if (tag) {
+                  tagIdsToConnect.push(tag.id);
+                }
+              } catch (tagError) {
+                console.error(
+                  `Error upserting tag "${normalizedTagName}" (slug: ${tagSlug}):`,
+                  tagError,
+                );
+              }
+            }
+
+            if (tagIdsToConnect.length > 0) {
+              videoCreateData.tags = {
+                create: tagIdsToConnect.map((id) => ({
+                  tag: { connect: { id } },
+                })),
+              };
+            }
           }
         }
 

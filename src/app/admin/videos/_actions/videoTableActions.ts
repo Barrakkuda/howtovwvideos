@@ -7,6 +7,8 @@ import {
   CategoriesOnVideos,
   VWType as VWTypeModel,
   VWTypesOnVideos,
+  Tag,
+  TagsOnVideos,
 } from "@generated/prisma";
 
 export interface VideoForTable extends Video {
@@ -15,6 +17,9 @@ export interface VideoForTable extends Video {
   })[];
   vwTypes: (VWTypesOnVideos & {
     vwType: VWTypeModel;
+  })[];
+  tags: (TagsOnVideos & {
+    tag: Tag;
   })[];
 }
 
@@ -36,6 +41,11 @@ export async function fetchVideosForTable(): Promise<FetchVideosResponse> {
         vwTypes: {
           include: {
             vwType: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
           },
         },
       },

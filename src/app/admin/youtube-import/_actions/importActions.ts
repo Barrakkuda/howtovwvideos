@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { Prisma, VideoPlatform, VideoStatus } from "@generated/prisma";
 import { revalidatePath } from "next/cache";
+import slugify from "slugify";
 
 // Import service functions
 import {
@@ -230,7 +231,40 @@ export async function importYouTubeVideo(
       }
 
       if (openAIAnalysisData.tags && openAIAnalysisData.tags.length > 0) {
-        videoCreateData.tags = openAIAnalysisData.tags;
+        const tagIdsToConnect: number[] = [];
+        for (const tagName of openAIAnalysisData.tags) {
+          if (!tagName || !tagName.trim()) continue;
+          const normalizedTagName = tagName.trim();
+          const tagSlug = slugify(normalizedTagName, {
+            lower: true,
+            strict: true,
+          });
+
+          try {
+            const tag = await prisma.tag.upsert({
+              where: { slug: tagSlug },
+              create: { name: normalizedTagName, slug: tagSlug },
+              update: {},
+            });
+            if (tag) {
+              tagIdsToConnect.push(tag.id);
+            }
+          } catch (tagError) {
+            console.error(
+              `Error upserting tag "${normalizedTagName}" (slug: ${tagSlug}):`,
+              tagError,
+            );
+          }
+        }
+
+        if (tagIdsToConnect.length > 0) {
+          videoCreateData.tags = {
+            create: tagIdsToConnect.map((id) => ({
+              tag: { connect: { id } },
+              assignedBy: "youtube-import-openai",
+            })),
+          };
+        }
       }
     }
 

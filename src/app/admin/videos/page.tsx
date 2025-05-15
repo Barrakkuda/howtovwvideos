@@ -266,7 +266,6 @@ function AdminVideosPageClient() {
       // Call getInitialState directly here.
       // Its own useCallback dependencies (searchParams, etc.) will be from the initial render.
       const clientSideInitialState = getInitialState();
-      console.log("Hydrating with (runs once):", clientSideInitialState);
 
       setSorting(clientSideInitialState.sorting ?? []);
       setColumnFilters(
@@ -290,12 +289,6 @@ function AdminVideosPageClient() {
   useEffect(() => {
     if (isMounted && didHydrate.current) {
       // Ensure hydration is complete before syncing
-      console.log("Syncing state to URL:", {
-        sorting,
-        columnFilters,
-        pagination,
-        columnVisibility,
-      });
       debouncedStateUpdate({
         sorting,
         columnFilters,
@@ -326,7 +319,6 @@ function AdminVideosPageClient() {
   }, [initialVideoTableFilters, defaultPageSizeForTable]);
 
   const loadData = useCallback(async () => {
-    console.log("AdminVideosPageClient: loadData triggered");
     setIsLoading(true);
     try {
       const [videosResult, categoriesResult, vwTypesResult] = await Promise.all(

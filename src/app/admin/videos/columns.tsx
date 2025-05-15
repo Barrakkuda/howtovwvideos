@@ -150,7 +150,7 @@ export const columns: ColumnDef<VideoForTable>[] = [
           {vwTypesRelation.map((item) => (
             <Badge
               key={item.vwType.id}
-              variant="outline"
+              variant="secondary"
               className="whitespace-nowrap"
             >
               {item.vwType.name}
@@ -197,16 +197,11 @@ export const columns: ColumnDef<VideoForTable>[] = [
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => {
-      const date = new Date(row.getValue("createdAt"));
-      return isNaN(date.getTime()) ? (
-        <span className="text-xs text-muted-foreground italic">
-          Invalid Date
-        </span>
-      ) : (
-        <span>{date.toLocaleDateString()}</span>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="text-sm text-muted-foreground tabular-nums">
+        {new Date(row.original.createdAt).toLocaleDateString()}
+      </div>
+    ),
     enableGlobalFilter: false,
   },
   {

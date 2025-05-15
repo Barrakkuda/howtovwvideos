@@ -21,6 +21,9 @@ type VideoWithDetails = Prisma.VideoGetPayload<{
     vwTypes: {
       include: { vwType: true };
     };
+    tags: {
+      include: { tag: true };
+    };
   };
 }>;
 
@@ -53,7 +56,7 @@ export default function EditVideoFormWrapper({
     status: video.status,
     platform: video.platform,
     transcript: video.transcript || "",
-    tags: video.tags || [],
+    tags: video.tags ? video.tags.map((tov) => tov.tag.name) : [],
     vwTypes: video.vwTypes.map((vot) => vot.vwType.slug) || [],
   };
 

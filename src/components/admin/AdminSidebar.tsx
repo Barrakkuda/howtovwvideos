@@ -5,7 +5,8 @@ import {
   Tags,
   SquarePlay,
   Car,
-  SettingsIcon,
+  Wrench,
+  Tag,
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -52,6 +53,15 @@ export default function AdminSidebar() {
           </li>
           <li>
             <Link
+              href="/admin/tags"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
+            >
+              <Tag className="h-5 w-5" />
+              <span>Tags</span>
+            </Link>
+          </li>
+          <li>
+            <Link
               href="/admin/youtube-import"
               className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
             >
@@ -64,7 +74,7 @@ export default function AdminSidebar() {
               href="/admin/maintenance"
               className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
             >
-              <SettingsIcon className="h-5 w-5" />
+              <Wrench className="h-5 w-5" />
               <span>Maintenance</span>
             </Link>
           </li>

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -12,29 +6,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-model Category {
-  id          Int                  @id @default(autoincrement())
-  name        String               @unique
-  description String?
-  slug        String?              @unique
-  sortOrder   Int                  @default(0)
-  videos      CategoriesOnVideos[]
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-}
-
-// New VWType Model
-model VWType {
-  id          Int               @id @default(autoincrement())
-  name        String            @unique
-  slug        String            @unique
-  description String?
-  sortOrder   Int               @default(0)
-  videos      VWTypesOnVideos[] // Relation to the join table
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
 }
 
 model Video {
@@ -51,8 +22,8 @@ model Video {
   status          VideoStatus          @default(DRAFT)
   isHowToVWVideo  Boolean              @default(false)
   categories      CategoriesOnVideos[]
-  vwTypes         VWTypesOnVideos[] // Changed from VWType[] to relation
-  tags            String[]
+  vwTypes         VWTypesOnVideos[]
+  tags            TagsOnVideos[]
   slug            String?              @unique
   processingError String?
   sourceKeyword   String?
@@ -61,10 +32,42 @@ model Video {
   updatedAt       DateTime             @updatedAt
 }
 
+model Category {
+  id          Int                  @id @default(autoincrement())
+  name        String               @unique
+  description String?
+  slug        String?              @unique
+  sortOrder   Int                  @default(0)
+  videos      CategoriesOnVideos[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model VWType {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  slug        String            @unique
+  description String?
+  sortOrder   Int               @default(0)
+  videos      VWTypesOnVideos[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model Tag {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  slug        String         @unique
+  description String?
+  videos      TagsOnVideos[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
 model CategoriesOnVideos {
   video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
   videoId    Int
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade) // Added onDelete Cascade
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId Int
   assignedAt DateTime @default(now())
   assignedBy String?
@@ -84,6 +87,18 @@ model VWTypesOnVideos {
   @@id([videoId, vwTypeId])
 }
 
+// New Join Table for Videos and Tags
+model TagsOnVideos {
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId    Int
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId      Int
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  @@id([videoId, tagId])
+}
+
 enum VideoStatus {
   DRAFT
   PUBLISHED
@@ -96,15 +111,3 @@ enum VideoPlatform {
   YOUTUBE
   VIMEO
 }
-
-// Old VWType enum is REMOVED
-// enum VWType {
-//   BEETLE
-//   GHIA
-//   THING
-//   BUS
-//   OFF_ROAD
-//   TYPE3
-//   TYPE4
-//   ALL
-// }

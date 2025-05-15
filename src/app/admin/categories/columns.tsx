@@ -83,16 +83,9 @@ export const getCategoryColumns = ({
   {
     accessorKey: "slug",
     header: "Slug",
-    cell: ({ row }) => {
-      const slug = row.getValue("slug") as string | null;
-      return slug ? (
-        <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-          {slug}
-        </div>
-      ) : (
-        <span className="text-xs text-muted-foreground italic">N/A</span>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="font-mono text-xs">{row.getValue("slug")}</div>
+    ),
     enableGlobalFilter: true,
   },
   {
@@ -133,15 +126,13 @@ export const getCategoryColumns = ({
   {
     accessorKey: "createdAt",
     header: ({ column }) => (
-      <div className="text-right">
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created At
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Created At
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
     ),
     cell: ({ row }) => {
       const createdAt = row.getValue("createdAt") as string | Date;

@@ -29,6 +29,9 @@ export default async function EditVideoPage({ params }: EditVideoPageProps) {
         vwTypes: {
           include: { vwType: true },
         },
+        tags: {
+          include: { tag: true },
+        },
       },
     }),
     prisma.category.findMany({

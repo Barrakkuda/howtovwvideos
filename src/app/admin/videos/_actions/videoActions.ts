@@ -33,6 +33,34 @@ export async function addVideo(formData: VideoFormData) {
   const data = result.data;
 
   try {
+    // Process Tags: Upsert and collect IDs for addVideo
+    const add_tagIdsToConnect: number[] = [];
+    if (data.tags && data.tags.length > 0) {
+      for (const tagName of data.tags) {
+        if (!tagName || !tagName.trim()) continue;
+        const normalizedTagName = tagName.trim();
+        const tagSlug = slugify(normalizedTagName, {
+          lower: true,
+          strict: true,
+        });
+        try {
+          const tag = await prisma.tag.upsert({
+            where: { slug: tagSlug },
+            create: { name: normalizedTagName, slug: tagSlug },
+            update: {},
+          });
+          if (tag) {
+            add_tagIdsToConnect.push(tag.id);
+          }
+        } catch (tagError) {
+          console.error(
+            `Error upserting tag "${normalizedTagName}" (slug: ${tagSlug}) for new video:`,
+            tagError,
+          );
+        }
+      }
+    }
+
     await prisma.video.create({
       data: {
         platform: data.platform as VideoPlatform,
@@ -45,7 +73,6 @@ export async function addVideo(formData: VideoFormData) {
         channelUrl: data.channelUrl as string | null,
         transcript: data.transcript,
         status: data.status as VideoStatus,
-        tags: data.tags,
         vwTypes:
           data.vwTypes && data.vwTypes.length > 0
             ? {
@@ -63,6 +90,15 @@ export async function addVideo(formData: VideoFormData) {
             assignedBy: "user-form",
           })),
         },
+        // NEW WAY for Tags in addVideo
+        ...(add_tagIdsToConnect.length > 0 && {
+          tags: {
+            create: add_tagIdsToConnect.map((tagId) => ({
+              tag: { connect: { id: tagId } },
+              assignedBy: "user-form",
+            })),
+          },
+        }),
       },
     });
 
@@ -136,19 +172,39 @@ export async function updateVideo(id: number, formData: VideoFormData) {
   const data = result.data;
 
   try {
-    // Use a transaction to ensure atomicity of operations
     await prisma.$transaction(async (tx) => {
-      // 1. Disconnect all existing categories for this video
-      await tx.categoriesOnVideos.deleteMany({
-        where: { videoId: id },
-      });
+      await tx.categoriesOnVideos.deleteMany({ where: { videoId: id } });
+      await tx.vWTypesOnVideos.deleteMany({ where: { videoId: id } });
+      await tx.tagsOnVideos.deleteMany({ where: { videoId: id } }); // Disconnect old tags
 
-      // 1.5. Disconnect all existing VWTypes for this video
-      await tx.vWTypesOnVideos.deleteMany({
-        where: { videoId: id },
-      });
+      // Process new Tags for updateVideo: Upsert and collect IDs
+      const update_tagIdsToConnect: number[] = [];
+      if (data.tags && data.tags.length > 0) {
+        for (const tagName of data.tags) {
+          if (!tagName || !tagName.trim()) continue;
+          const normalizedTagName = tagName.trim();
+          const tagSlug = slugify(normalizedTagName, {
+            lower: true,
+            strict: true,
+          });
+          try {
+            const tag = await tx.tag.upsert({
+              where: { slug: tagSlug },
+              create: { name: normalizedTagName, slug: tagSlug },
+              update: {},
+            });
+            if (tag) {
+              update_tagIdsToConnect.push(tag.id);
+            }
+          } catch (tagError) {
+            console.error(
+              `Error upserting tag "${normalizedTagName}" (slug: ${tagSlug}) for video update (ID: ${id}):`,
+              tagError,
+            );
+          }
+        }
+      }
 
-      // 2. Prepare the video update data, excluding categories and vwTypes for now
       const videoUpdateData: Prisma.VideoUpdateInput = {
         platform: data.platform as VideoPlatform,
         videoId: data.videoId as string,
@@ -160,22 +216,19 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         channelUrl: data.channelUrl as string | null,
         transcript: data.transcript,
         status: data.status as VideoStatus,
-        tags: data.tags,
         isHowToVWVideo:
           data.status === VideoStatus.PUBLISHED ? true : undefined,
       };
 
-      // 3. If new categoryIds are provided, add them to the update data
       if (data.categoryIds && data.categoryIds.length > 0) {
         videoUpdateData.categories = {
           create: data.categoryIds.map((catId) => ({
             category: { connect: { id: catId } },
-            assignedBy: "user-form-update", // Or a more specific identifier
+            assignedBy: "user-form-update",
           })),
         };
       }
 
-      // 3.5 If new vwTypes are provided, add them to the update data
       if (data.vwTypes && data.vwTypes.length > 0) {
         videoUpdateData.vwTypes = {
           create: data.vwTypes.map((slug) => ({
@@ -185,7 +238,16 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         };
       }
 
-      // 4. Update the video with new data and new category/vwType connections
+      // NEW WAY for Tags in updateVideo
+      if (update_tagIdsToConnect.length > 0) {
+        videoUpdateData.tags = {
+          create: update_tagIdsToConnect.map((tagId) => ({
+            tag: { connect: { id: tagId } },
+            assignedBy: "user-form-update",
+          })),
+        };
+      }
+
       await tx.video.update({
         where: { id },
         data: videoUpdateData,

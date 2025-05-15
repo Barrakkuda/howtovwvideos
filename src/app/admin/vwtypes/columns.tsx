@@ -129,9 +129,7 @@ export const columns = (
     ),
     cell: ({ row }) => (
       <div className="text-center w-full">
-        <Badge variant={row.original.videoCount > 0 ? "default" : "secondary"}>
-          {row.original.videoCount}
-        </Badge>
+        <div className="text-center w-full">{row.original.videoCount}</div>
       </div>
     ),
     enableGlobalFilter: false, // Usually don't globally filter by count
