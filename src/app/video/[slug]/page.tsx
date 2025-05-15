@@ -2,12 +2,9 @@ import { notFound } from "next/navigation";
 import {
   getVideoBySlug,
   PublicVideoDetails,
-} from "../_actions/publicVideoActions"; // Action to be created
-// import VideoPlayer from "@/components/public/VideoPlayer"; // Component to be created
-// import VideoMetadataDisplay from "@/components/public/VideoMetadataDisplay"; // Component to be created
-// import TranscriptDisplay from "@/components/public/TranscriptDisplay"; // Component to be created
+} from "../_actions/publicVideoActions";
 import { Metadata } from "next";
-import { VideoStatus } from "@generated/prisma"; // For checking status
+import { VideoStatus } from "@generated/prisma";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -31,13 +28,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // const previousImages = (await parent).openGraph?.images || [];
 
   return {
-    title: videoData.title,
-    description: videoData.description || "Watch this HowToVW video.", // Fallback description
+    title: videoData.title + " | " + process.env.NEXT_PUBLIC_SITE_NAME,
+    description: videoData.description || "Watch this How-To VW video.",
     openGraph: {
-      title: videoData.title,
+      title: videoData.title + " | " + process.env.NEXT_PUBLIC_SITE_NAME,
       description: videoData.description || "",
       type: "video.other",
-      url: `https://www.howtovw.com/video/${videoData.slug}`, // Replace with your actual domain
+      url: `https://${process.env.NEXT_PUBLIC_SITE_URL}/video/${videoData.slug}`, // Replace with your actual domain
       images: videoData.thumbnailUrl ? [{ url: videoData.thumbnailUrl }] : [],
       // You might also want to add video-specific OpenGraph tags if your video player supports them
       // e.g., video:secure_url, video:type, video:width, video:height
