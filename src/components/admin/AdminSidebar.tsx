@@ -7,6 +7,7 @@ import {
   Car,
   Wrench,
   Tag,
+  Search,
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -58,6 +59,15 @@ export default function AdminSidebar() {
             >
               <Tag className="h-5 w-5" />
               <span>Tags</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/admin/searches"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
+            >
+              <Search className="h-5 w-5" />
+              <span>Search Logs</span>
             </Link>
           </li>
           <li>

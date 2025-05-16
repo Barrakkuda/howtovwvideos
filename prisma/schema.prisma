@@ -111,3 +111,14 @@ enum VideoPlatform {
   YOUTUBE
   VIMEO
 }
+
+model SearchLog {
+  id               Int      @id @default(autoincrement())
+  term             String
+  partialIpAddress String?
+  resultsCount     Int
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([term])
+}

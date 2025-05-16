@@ -14,7 +14,6 @@ export default function SearchBar() {
   const pathname = usePathname();
   const currentSearchParams = useSearchParams();
 
-  // Initialize searchQuery from URL q param, and keep it in sync
   const [searchQuery, setSearchQuery] = useState(
     currentSearchParams.get("q") || "",
   );
@@ -30,7 +29,7 @@ export default function SearchBar() {
 
       if (newValue === "") {
         if (pathname === "/search") {
-          router.push("/"); // Navigate to homepage if clearing on /search page
+          router.push("/");
         } else {
           const newParams = new URLSearchParams(currentSearchParams.toString());
           newParams.delete("q");
@@ -68,9 +67,12 @@ export default function SearchBar() {
         return;
       }
 
-      // Valid search: always navigate to /search page with only the q param
       const searchPageParams = new URLSearchParams();
       searchPageParams.set("q", trimmedQuery);
+
+      // Set the flag in sessionStorage before navigating
+      sessionStorage.setItem("search_submission_term", trimmedQuery);
+
       router.push(`/search?${searchPageParams.toString()}`);
     },
     [searchQuery, router, pathname, currentSearchParams],
@@ -85,7 +87,7 @@ export default function SearchBar() {
         <Input
           type="search"
           placeholder="Search videos..."
-          value={searchQuery} // Controlled component
+          value={searchQuery}
           onChange={handleSearchChange}
           className="bg-neutral-700 text-white placeholder-neutral-400 focus:bg-neutral-600 border-neutral-600 focus-visible:ring-blue-500 focus-visible:ring-offset-neutral-800"
         />

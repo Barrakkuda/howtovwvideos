@@ -3,6 +3,7 @@ import VideoCard from "./VideoCard"; // Assuming VideoCardProps exports the vide
 import PaginationControls from "@/components/ui/PaginationControls";
 import { VideoStatus, Prisma } from "@generated/prisma";
 import { redirect } from "next/navigation";
+import { SearchLoggerClient } from "./SearchLoggerClient"; // Import the new client component
 
 interface VideoGridProps {
   currentPage?: number;
@@ -257,6 +258,12 @@ export default async function VideoGrid({
         hasPrevPage={hasPrevPage}
         basePath={basePath}
       />
+      {searchQuery && totalVideos >= 0 && (
+        <SearchLoggerClient
+          searchQuery={searchQuery}
+          totalVideos={totalVideos}
+        />
+      )}
     </div>
   );
 }

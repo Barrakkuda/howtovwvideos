@@ -100,6 +100,7 @@ interface DataTableProps<TData, TValue> {
   >;
   onResetTableConfig: () => void;
   bulkActions?: BulkAction<TData>[];
+  pageCount?: number;
 }
 
 // --- Helper Functions ---
@@ -173,6 +174,7 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   onResetTableConfig,
   bulkActions = [],
+  pageCount,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable<TData>({
     data,
@@ -200,6 +202,11 @@ export function DataTable<TData, TValue>({
     onRowSelectionChange: onRowSelectionChange,
     onGlobalFilterChange: onGlobalFilterChange,
     onPaginationChange: onPaginationChange,
+
+    ...(pageCount !== undefined && {
+      pageCount: pageCount,
+      manualPagination: true,
+    }),
 
     // Filter Functions
     filterFns: {
