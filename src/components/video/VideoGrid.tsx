@@ -10,6 +10,7 @@ interface VideoGridProps {
   vwTypeSlug?: string;
   categorySlug?: string;
   tagSlug?: string;
+  searchQuery?: string;
   // Add other filter props here later, e.g.:
   // searchQuery?: string;
   // tags?: string[];
@@ -29,16 +30,18 @@ interface VideoForCardDisplay {
 
 async function fetchPublishedVideos({
   page = 1,
-  limit = 24, // Default items per page
+  limit = 24,
   vwTypeSlug,
   categorySlug,
   tagSlug,
+  searchQuery,
 }: {
   page?: number;
   limit?: number;
   vwTypeSlug?: string;
   categorySlug?: string;
   tagSlug?: string;
+  searchQuery?: string;
 }): Promise<{
   videos: VideoForCardDisplay[];
   totalPages: number;
@@ -49,12 +52,19 @@ async function fetchPublishedVideos({
 }> {
   const skip = (page - 1) * limit;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const whereClause: any = {
+  const whereClause: Prisma.VideoWhereInput = {
     status: VideoStatus.PUBLISHED,
-    isHowToVWVideo: true, // Assuming we only want to show these on the homepage grid
-    slug: { not: null }, // Add slug requirement to the where clause
+    isHowToVWVideo: true,
+    slug: { not: null },
   };
+
+  // Add search query if provided
+  if (searchQuery) {
+    whereClause.OR = [
+      { title: { contains: searchQuery, mode: "insensitive" } },
+      { description: { contains: searchQuery, mode: "insensitive" } },
+    ];
+  }
 
   if (vwTypeSlug) {
     whereClause.vwTypes = {
@@ -123,6 +133,7 @@ export default async function VideoGrid({
   vwTypeSlug,
   categorySlug,
   tagSlug,
+  searchQuery,
 }: VideoGridProps) {
   // First, fetch the total count to validate the page number
   const whereClause: Prisma.VideoWhereInput = {
@@ -130,6 +141,14 @@ export default async function VideoGrid({
     isHowToVWVideo: true,
     slug: { not: null },
   };
+
+  // Add search query if provided
+  if (searchQuery) {
+    whereClause.OR = [
+      { title: { contains: searchQuery, mode: "insensitive" } },
+      { description: { contains: searchQuery, mode: "insensitive" } },
+    ];
+  }
 
   if (vwTypeSlug) {
     whereClause.vwTypes = {
@@ -161,7 +180,9 @@ export default async function VideoGrid({
   if (currentPage < 1 || (totalPages > 0 && currentPage > totalPages)) {
     // Determine the base path for redirection
     let basePath = "/";
-    if (vwTypeSlug) {
+    if (searchQuery) {
+      basePath = `/search?q=${encodeURIComponent(searchQuery)}`;
+    } else if (vwTypeSlug) {
       basePath = `/type/${vwTypeSlug}`;
     } else if (categorySlug) {
       basePath = `/category/${categorySlug}`;
@@ -185,12 +206,15 @@ export default async function VideoGrid({
     vwTypeSlug,
     categorySlug,
     tagSlug,
+    searchQuery,
   });
 
   if (totalVideos === 0) {
     let messageDetail =
       "There are currently no published videos matching your criteria.";
-    if (vwTypeSlug) {
+    if (searchQuery) {
+      messageDetail = `No videos found matching "${searchQuery}". Try different search terms.`;
+    } else if (vwTypeSlug) {
       messageDetail = `There are currently no published videos for the type "${vwTypeSlug.replace(/-/g, " ")}".`;
     } else if (categorySlug) {
       messageDetail = `There are currently no published videos for the category "${categorySlug.replace(/-/g, " ")}".`;
@@ -209,7 +233,9 @@ export default async function VideoGrid({
 
   // Determine basePath for pagination
   let basePath = "/";
-  if (vwTypeSlug) {
+  if (searchQuery) {
+    basePath = `/search?q=${encodeURIComponent(searchQuery)}`;
+  } else if (vwTypeSlug) {
     basePath = `/type/${vwTypeSlug}`;
   } else if (categorySlug) {
     basePath = `/category/${categorySlug}`;

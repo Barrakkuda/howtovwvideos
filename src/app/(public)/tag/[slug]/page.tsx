@@ -5,18 +5,14 @@ import VideoGrid from "@/components/video/VideoGrid";
 // import PageHeader from "@/components/layout/PageHeader"; // Assuming you have a generic PageHeader
 
 interface TagPageProps {
-  params: {
-    slug: string;
-  };
-  searchParams: {
-    page?: string;
-  };
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: TagPageProps): Promise<Metadata> {
-  const tagSlug = params.slug;
+  const tagSlug = (await params).slug;
   const result = await getTagBySlug(tagSlug);
 
   if (!result.success || !result.data) {
@@ -37,8 +33,10 @@ export async function generateMetadata({
 }
 
 export default async function TagPage({ params, searchParams }: TagPageProps) {
-  const tagSlug = params.slug;
-  const currentPage = searchParams.page ? parseInt(searchParams.page, 10) : 1;
+  const tagSlug = (await params).slug;
+  const currentPage = (await searchParams).page
+    ? parseInt((await searchParams).page as string, 10)
+    : 1;
 
   const tagResult = await getTagBySlug(tagSlug);
 
@@ -48,32 +46,15 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
 
   const tag = tagResult.data;
 
-  // The getTagBySlug action already fetches associated published videos.
-  // However, VideoGrid has its own fetchPublishedVideos which includes pagination.
-  // We will let VideoGrid handle fetching its own videos based on the tagSlug.
-
   return (
     <>
-      {/* <PageHeader
-        title={tag.name}
-        description={tag.description || undefined}
-        // breadcrumbs={[
-        //   { name: "Home", href: "/" },
-        //   { name: "Tags", href: "/tags" }, // Assuming a future /tags listing page
-        //   { name: tag.name },
-        // ]}
-      /> */}
       <h1 className="text-3xl font-bold mb-6 sm:mb-8">{tag.name} Videos</h1>
       {tag.description && (
         <p className="text-xl text-muted-foreground mb-6 sm:mb-8 -mt-4 sm:-mt-6">
           {tag.description}
         </p>
       )}
-      <VideoGrid
-        tagSlug={tagSlug}
-        currentPage={currentPage}
-        itemsPerPage={20} // Or your desired default
-      />
+      <VideoGrid tagSlug={tagSlug} currentPage={currentPage} />
     </>
   );
 }
