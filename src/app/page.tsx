@@ -2,10 +2,18 @@ import Header from "@/components/layout/Header";
 import VideoGrid from "@/components/video/VideoGrid";
 import Sidebar from "@/components/layout/Sidebar";
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
 
 interface HomePageProps {
   searchParams: Promise<{ page?: string }>;
 }
+
+// Metadata
+export const metadata: Metadata = {
+  title: `How-To VW Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+  description:
+    "Discover a comprehensive collection of how-to videos dedicated to aircooled Volkswagen vehicles. Whether you're a seasoned VW enthusiast or a new owner, find awesome video tutorials to help you understand, maintain, and customize your VW.",
+};
 
 export default async function Home({ searchParams }: HomePageProps) {
   const searchParamsValues = await searchParams;

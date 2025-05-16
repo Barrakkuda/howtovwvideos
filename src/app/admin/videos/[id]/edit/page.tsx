@@ -9,7 +9,8 @@ interface EditVideoPageProps {
 }
 
 export const metadata: Metadata = {
-  title: "Edit Video",
+  title: `Edit Video | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+  description: "Edit Video",
 };
 
 export default async function EditVideoPage({ params }: EditVideoPageProps) {

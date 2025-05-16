@@ -1,4 +1,11 @@
 import { prisma } from "@/lib/db";
+import { Metadata } from "openai/resources/shared.mjs";
+
+// Metadata
+export const metadata: Metadata = {
+  title: `Dashboard | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+  description: "Dashboard",
+};
 
 export default async function AdminDashboardPage() {
   const videoCount = await prisma.video.count();

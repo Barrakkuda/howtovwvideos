@@ -1,9 +1,12 @@
 import YouTubeImportForm from "@/components/admin/YouTubeImportForm";
 import { prisma } from "@/lib/db";
 import BatchImportSection from "@/components/admin/BatchImportSection";
+import { Metadata } from "next";
 
-export const metadata = {
-  title: "Import YouTube Videos",
+// Metadata
+export const metadata: Metadata = {
+  title: `Import Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+  description: "Import Videos",
 };
 
 export default async function YouTubeImportPage() {
