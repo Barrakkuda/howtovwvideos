@@ -742,6 +742,79 @@ export default function VideoForm({
           )}
         />
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Popularity Score Section - Using FormField */}
+          {(dbVideoId || initialData?.id) && (
+            <FormField
+              control={form.control}
+              name="popularityScore" // Connects to schema, though primarily display + action here
+              render={() => (
+                // { field: _field_popularity }, // field marked as unused - REMOVED
+                <FormItem>
+                  <FormLabel>Popularity Score</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={
+                          currentPopularityScore === null ||
+                          currentPopularityScore === undefined
+                            ? "N/A"
+                            : currentPopularityScore.toFixed(4)
+                        }
+                        readOnly
+                        className="flex-grow bg-background"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon" // Made button smaller
+                        onClick={handleRecalculateScore}
+                        disabled={isRecalculatingScore}
+                        title="Recalculate Score"
+                      >
+                        <Loader2
+                          className={`h-4 w-4 ${isRecalculatingScore ? "animate-spin" : ""}`}
+                        />
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormDescription className="mt-2 text-xs">
+                    <Info className="inline-block h-3 w-3 mr-1 flex-shrink-0" />
+                    <span>
+                      Based on views, likes, and age. Higher is more popular.
+                      Auto-updates periodically.
+                    </span>
+                  </FormDescription>
+                  <FormMessage />{" "}
+                  {/* In case of future validation on this field */}
+                </FormItem>
+              )}
+            />
+          )}
+
+          {/* Published At Display Section - Using FormField */}
+          {(dbVideoId || initialData?.id) && initialData?.publishedAt && (
+            <FormField
+              control={form.control}
+              name="publishedAt" // Connects to schema
+              render={() => (
+                // { field: _field_publishedAt }, // field marked as unused - REMOVED
+                <FormItem>
+                  <FormLabel>Originally Published (YouTube)</FormLabel>
+                  <FormControl className="flex-grow">
+                    <Input value={displayPublishedAt} readOnly />
+                  </FormControl>
+                  <FormDescription className="mt-2 text-xs">
+                    The original publication date of the video on YouTube.
+                  </FormDescription>
+                  <FormMessage />{" "}
+                  {/* In case of future validation on this field */}
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
+
         <FormField
           control={form.control}
           name="status"
@@ -906,79 +979,6 @@ export default function VideoForm({
             )}
           </>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-          {/* Popularity Score Section - Using FormField */}
-          {(dbVideoId || initialData?.id) && (
-            <FormField
-              control={form.control}
-              name="popularityScore" // Connects to schema, though primarily display + action here
-              render={() => (
-                // { field: _field_popularity }, // field marked as unused - REMOVED
-                <FormItem>
-                  <FormLabel>Popularity Score</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={
-                          currentPopularityScore === null ||
-                          currentPopularityScore === undefined
-                            ? "N/A"
-                            : currentPopularityScore.toFixed(4)
-                        }
-                        readOnly
-                        className="flex-grow bg-background"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon" // Made button smaller
-                        onClick={handleRecalculateScore}
-                        disabled={isRecalculatingScore}
-                        title="Recalculate Score"
-                      >
-                        <Loader2
-                          className={`h-4 w-4 ${isRecalculatingScore ? "animate-spin" : ""}`}
-                        />
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormDescription className="mt-2 text-xs">
-                    <Info className="inline-block h-3 w-3 mr-1 flex-shrink-0" />
-                    <span>
-                      Based on views, likes, and age. Higher is more popular.
-                      Auto-updates periodically.
-                    </span>
-                  </FormDescription>
-                  <FormMessage />{" "}
-                  {/* In case of future validation on this field */}
-                </FormItem>
-              )}
-            />
-          )}
-
-          {/* Published At Display Section - Using FormField */}
-          {(dbVideoId || initialData?.id) && initialData?.publishedAt && (
-            <FormField
-              control={form.control}
-              name="publishedAt" // Connects to schema
-              render={() => (
-                // { field: _field_publishedAt }, // field marked as unused - REMOVED
-                <FormItem>
-                  <FormLabel>Originally Published (YouTube)</FormLabel>
-                  <FormControl className="flex-grow">
-                    <Input value={displayPublishedAt} readOnly />
-                  </FormControl>
-                  <FormDescription className="mt-2 text-xs">
-                    The original publication date of the video on YouTube.
-                  </FormDescription>
-                  <FormMessage />{" "}
-                  {/* In case of future validation on this field */}
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
 
         <div className="flex items-center justify-end gap-2">
           <Button
