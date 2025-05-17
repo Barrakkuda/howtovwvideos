@@ -6,7 +6,10 @@ import { Metadata } from "next";
 import HeroCarousel from "@/components/layout/HeroCarousel";
 import HomePageSearch from "@/components/search/HomePageSearch";
 import { VideoCarousel } from "@/components/video/VideoCarousel";
-import { getRecentPopularVideos } from "@/app/_actions/videoFeedActions";
+import {
+  getRecentPopularVideos,
+  getRecentlyPublishedVideos,
+} from "@/app/_actions/videoFeedActions";
 
 interface HomePageProps {
   searchParams: Promise<{ page?: string }>;
@@ -29,15 +32,16 @@ export default async function Home({ searchParams }: HomePageProps) {
   }
 
   const recentPopularVideos = await getRecentPopularVideos();
+  const recentlyPublishedVideos = await getRecentlyPublishedVideos();
 
   return (
     <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-black text-neutral-900 dark:text-neutral-100">
       <Header />
       <HeroCarousel />
 
-      {/* Recently Popular Videos Carousel Section */}
-      {recentPopularVideos && recentPopularVideos.length > 0 && (
-        <section className="py-8 md:py-12 bg-neutral-100 dark:bg-neutral-900">
+      <section className="py-8 md:py-12 m-[-100px] z-100">
+        {/* Recently Popular Videos Carousel Section */}
+        {recentPopularVideos && recentPopularVideos.length > 0 && (
           <div className="container mx-auto">
             <VideoCarousel
               videos={recentPopularVideos}
@@ -45,8 +49,19 @@ export default async function Home({ searchParams }: HomePageProps) {
               itemsPerPageMap={{ base: 1, sm: 2, md: 3, lg: 4, xl: 4 }}
             />
           </div>
-        </section>
-      )}
+        )}
+
+        {/* Recently Published Videos Carousel Section */}
+        {recentlyPublishedVideos && recentlyPublishedVideos.length > 0 && (
+          <div className="container mx-auto">
+            <VideoCarousel
+              videos={recentlyPublishedVideos}
+              title="Recently Published Videos"
+              itemsPerPageMap={{ base: 1, sm: 2, md: 3, lg: 4, xl: 4 }}
+            />
+          </div>
+        )}
+      </section>
 
       <main className="flex-grow container mx-auto p-4 sm:p-6 md:p-8">
         <HomePageSearch />

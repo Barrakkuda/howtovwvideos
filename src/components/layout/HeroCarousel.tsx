@@ -79,7 +79,7 @@ export default function HeroCarousel() {
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 pointer-events-none">
         <div className="pointer-events-auto">
           <h1 className="text-4xl sm:text-5xl md:text-6xl text-white mb-6">
-            Your VW Maintenance Hub
+            Your Air-Cooled VW Video Hub
           </h1>
           <div className="w-full">
             <HomePageSearch />
