@@ -52,7 +52,7 @@ export default function HomePageSearch() {
           placeholder="Search for how-to videos..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-16 flex-grow bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 placeholder-neutral-500 dark:placeholder-neutral-400 placeholder:text-xl focus:ring-2 focus:ring-blue-500 border-neutral-300 dark:border-neutral-600"
+          className="h-16 flex-grow bg-white dark:bg-black/50 text-neutral-900 dark:text-neutral-100 placeholder-neutral-500 dark:placeholder-white/60 md:text-xl placeholder:text-xl focus:ring-2 focus:ring-white focus-visible:ring-2 focus-visible:ring-white/40 border-neutral-300 dark:border-white/30"
           aria-label="Search videos"
         />
         <Button

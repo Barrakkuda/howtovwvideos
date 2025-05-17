@@ -12,7 +12,7 @@ export default async function Header() {
       <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold shrink-0">
           <Link href="/" className="hover:text-blue-400 transition-colors">
-            How-To VW Videos
+            {process.env.NEXT_PUBLIC_SITE_NAME}
           </Link>
         </h1>
         <VWTypeNavigation />
