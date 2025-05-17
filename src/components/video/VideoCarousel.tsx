@@ -60,9 +60,9 @@ export function VideoCarousel({
     .join(" ");
 
   return (
-    <div className="w-full py-6">
+    <div className="w-full pb-6">
       {title && (
-        <h2 className="text-2xl font-semibold mb-4 px-4 sm:px-0">{title}</h2>
+        <h2 className="text-2xl font-semibold mb-4 md:px-2 sm:px-0">{title}</h2>
       )}
       <Carousel
         opts={{
@@ -83,8 +83,8 @@ export function VideoCarousel({
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="absolute top-1/2 -translate-y-1/2 left-[-2rem] md:left-[-2.5rem] z-10 hidden sm:flex" />
-        <CarouselNext className="absolute top-1/2 -translate-y-1/2 right-[-2rem] md:right-[-2.5rem] z-10 hidden sm:flex" />
+        <CarouselPrevious className="absolute top-1/3 -translate-y-1/3 left-[-2rem] md:left-[-2.5rem] z-10 hidden sm:flex" />
+        <CarouselNext className="absolute top-1/3 -translate-y-1/3 right-[-2rem] md:right-[-2.5rem] z-10 hidden sm:flex" />
       </Carousel>
     </div>
   );

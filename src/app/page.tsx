@@ -10,6 +10,7 @@ import {
   getRecentPopularVideos,
   getRecentlyPublishedVideos,
 } from "@/app/_actions/videoFeedActions";
+import CategoryGrid from "@/components/category/CategoryGrid";
 
 interface HomePageProps {
   searchParams: Promise<{ page?: string }>;
@@ -39,7 +40,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       <Header />
       <HeroCarousel />
 
-      <section className="py-8 md:py-12 m-[-100px] z-100">
+      <section className="md:py-12 md:mt-[-100px] z-15">
         {/* Recently Popular Videos Carousel Section */}
         {recentPopularVideos && recentPopularVideos.length > 0 && (
           <div className="container mx-auto">
@@ -63,7 +64,9 @@ export default async function Home({ searchParams }: HomePageProps) {
         )}
       </section>
 
-      <main className="flex-grow container mx-auto p-4 sm:p-6 md:p-8">
+      <CategoryGrid />
+
+      {/* <main className="flex-grow container mx-auto p-4 sm:p-6 md:p-8">
         <HomePageSearch />
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
           <div className="md:col-span-4 lg:col-span-3">
@@ -73,7 +76,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <VideoGrid currentPage={currentPage > 0 ? currentPage : 1} />
           </div>
         </div>
-      </main>
+      </main> */}
 
       <footer className="bg-neutral-100 dark:bg-neutral-800 text-center p-4 text-sm text-neutral-600 dark:text-neutral-400">
         <p>

@@ -26,16 +26,9 @@ export default function VideoCard({ video }: VideoCardProps) {
   const videoLink = video.url || `/video/${video.slug}`;
 
   return (
-    // Ensuring the card maintains its visual structure.
-    // The outer div was: "rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl"
-    // Let's ensure those styles are present or similar.
-    // The inner Link > div for image was: "relative w-full aspect-video bg-neutral-200 dark:bg-neutral-700"
-    // and it had rounded-lg and overflow-hidden directly on it previously, let's stick to that for image container.
-
-    <div className="rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl flex flex-col h-full">
-      <Link href={videoLink} className="block group flex flex-col h-full">
-        <div className="relative w-full aspect-video bg-neutral-200 dark:bg-neutral-700">
-          {/* Removed rounded-lg and overflow-hidden from here as it's on parent now for the whole card */}
+    <div className="transition-all flex flex-col h-full">
+      <Link href={videoLink} className="group flex flex-col h-full">
+        <div className="rounded-lg overflow-hidden relative w-full aspect-video bg-neutral-200 dark:bg-neutral-700">
           <Image
             src={video.thumbnailUrl || defaultThumbnail}
             alt={`Thumbnail for ${video.title}`}
@@ -45,11 +38,8 @@ export default function VideoCard({ video }: VideoCardProps) {
             priority={false}
           />
         </div>
-        <div className="py-3 px-2.5 flex-grow flex flex-col justify-between">
-          {" "}
-          {/* Adjusted padding, added flex-grow */}
+        <div className="py-3 md:px-2.5 flex-grow flex flex-col justify-between">
           <div>
-            {" "}
             {/* Wrapper for title and badges */}
             <h3
               className="text-md font-semibold text-neutral-800 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 overflow-hidden mb-1.5"

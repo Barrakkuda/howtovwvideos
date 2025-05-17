@@ -12,7 +12,7 @@ export default async function VWTypeNavigation() {
   const vwTypeLinks = result.data;
 
   return (
-    <nav className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 sm:gap-x-4 order-last sm:order-none w-full sm:w-auto mt-4 sm:mt-0">
+    <nav className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 sm:gap-x-4 order-last sm:order-none w-full sm:w-auto">
       {vwTypeLinks.map((item) => (
         <Link
           key={item.id} // Use id from DB as key

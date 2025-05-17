@@ -15,8 +15,10 @@ export default async function Header() {
             {process.env.NEXT_PUBLIC_SITE_NAME}
           </Link>
         </h1>
+
         <VWTypeNavigation />
-        <div className="w-full sm:w-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
+
+        <div className="w-full hidden md:block sm:w-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
           <Suspense fallback={<div>Loading search...</div>}>
             <SearchBar />
           </Suspense>

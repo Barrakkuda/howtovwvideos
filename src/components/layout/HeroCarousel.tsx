@@ -29,7 +29,7 @@ const carouselImages = [
 
 export default function HeroCarousel() {
   return (
-    <div className="relative w-full h-[75vh] overflow-hidden hero-carousel-container">
+    <div className="relative w-full h-[40vh] md:h-[75vh] overflow-hidden hero-carousel-container">
       {" "}
       {/* Adjusted height slightly */}
       <Carousel
