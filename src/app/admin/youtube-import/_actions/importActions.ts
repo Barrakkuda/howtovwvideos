@@ -126,6 +126,11 @@ export async function importYouTubeVideo(
       processedAt: new Date(),
       status: isHowToVWVideo ? VideoStatus.PUBLISHED : VideoStatus.REJECTED,
       slug: generatedSlug,
+      // Add publishedAt from YouTube video data
+      ...(videoData.publishedAt &&
+      !isNaN(new Date(videoData.publishedAt).getTime())
+        ? { publishedAt: new Date(videoData.publishedAt) }
+        : {}),
       // Add direct mapping for stats and score if they exist
       ...(videoData.popularityScore !== undefined && {
         popularityScore: videoData.popularityScore,

@@ -29,6 +29,7 @@ model Video {
   sourceKeyword   String?
   processedAt     DateTime?
   popularityScore Float?
+  publishedAt     DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 }

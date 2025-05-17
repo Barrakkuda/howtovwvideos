@@ -5,6 +5,12 @@ import Link from "next/link";
 
 // Define a basic type for the video prop.
 // This should be refined to match the actual data structure of your videos.
+export interface CategoryInfo {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export interface VideoCardProps {
   video: {
     id: number; // Assuming video has an ID for the link
@@ -12,6 +18,7 @@ export interface VideoCardProps {
     title: string;
     thumbnailUrl?: string | null;
     url?: string | null; // Link to the video detail page or external source
+    categories?: CategoryInfo[];
     // Add other relevant fields like views, duration, uploader, etc. as needed
     // For example:
     // channelTitle?: string;
@@ -28,9 +35,9 @@ export default function VideoCard({ video }: VideoCardProps) {
   const videoLink = video.url || `/video/${video.slug}`;
 
   return (
-    <div className="rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl">
+    <div className="transition-all">
       <Link href={videoLink} className="block group">
-        <div className="relative w-full aspect-video bg-neutral-200 dark:bg-neutral-700">
+        <div className="rounded-lg overflow-hidden relative w-full aspect-video bg-neutral-200 dark:bg-neutral-700">
           <Image
             src={video.thumbnailUrl || defaultThumbnail}
             alt={`Thumbnail for ${video.title}`}
@@ -48,6 +55,24 @@ export default function VideoCard({ video }: VideoCardProps) {
           >
             {video.title}
           </h3>
+          {video.categories && video.categories.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {video.categories.slice(0, 3).map(
+                (
+                  category, // Show up to 3 categories
+                ) => (
+                  <Link
+                    href={`/category/${category.slug}`}
+                    key={category.id}
+                    className="inline-block text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600 px-2 py-0.5 rounded-full transition-colors whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()} // Prevent card link navigation when clicking badge
+                  >
+                    {category.name}
+                  </Link>
+                ),
+              )}
+            </div>
+          )}
           {/* Optional: Add more details like channel, views, etc. */}
           {/* {video.channelTitle && ( */}
           {/*   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 truncate">{video.channelTitle}</p> */}

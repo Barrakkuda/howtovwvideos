@@ -34,6 +34,7 @@ export const videoSchema = z.object({
   vwTypes: z.array(z.string()).optional().default([]),
   transcript: z.string().optional(),
   popularityScore: z.number().nullable().optional(),
+  publishedAt: z.date().nullable().optional(),
 });
 
 export type VideoFormData = z.infer<typeof videoSchema>;

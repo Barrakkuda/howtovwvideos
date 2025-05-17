@@ -16,6 +16,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,7 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Loader2, Info } from "lucide-react";
 import { XIcon } from "lucide-react";
 import {
   getVideoTranscript,
@@ -44,6 +45,7 @@ import {
   recalculateVideoPopularityScore,
 } from "@/app/admin/videos/_actions/videoActions";
 import { OpenAIAnalysisResponse } from "@/app/admin/youtube-import/_actions/importActions";
+import { formatDate } from "@/lib/utils/formatters";
 
 interface VideoFormProps {
   categories: Category[];
@@ -76,6 +78,11 @@ export default function VideoForm({
   >(initialData?.popularityScore);
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false);
 
+  // Format publishedAt for display if available
+  const displayPublishedAt = initialData?.publishedAt
+    ? formatDate(initialData.publishedAt)
+    : "N/A";
+
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema) as unknown as Resolver<VideoFormData>,
     defaultValues: initialData
@@ -95,6 +102,7 @@ export default function VideoForm({
           vwTypes: initialData.vwTypes || [],
           transcript: initialData.transcript ?? "",
           popularityScore: initialData.popularityScore ?? undefined,
+          publishedAt: initialData.publishedAt || undefined,
         }
       : {
           platform: VideoPlatform.YOUTUBE,
@@ -112,6 +120,7 @@ export default function VideoForm({
           vwTypes: [],
           transcript: "",
           popularityScore: undefined,
+          publishedAt: undefined,
         },
   });
 
@@ -898,36 +907,78 @@ export default function VideoForm({
           </>
         )}
 
-        {/* Popularity Score Display and Recalculate Button */}
-        {(dbVideoId || initialData?.id) && ( // Only show if editing an existing video
-          <div className="space-y-2">
-            <FormLabel>Popularity Score</FormLabel>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                value={
-                  currentPopularityScore !== null &&
-                  currentPopularityScore !== undefined
-                    ? currentPopularityScore.toFixed(2)
-                    : ""
-                }
-                readOnly
-                className="w-24 bg-muted"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleRecalculateScore}
-                disabled={isRecalculatingScore || isSubmitting}
-              >
-                {isRecalculatingScore ? "Recalculating..." : "Recalculate"}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Current score. Click to recalculate based on latest YouTube stats.
-            </p>
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          {/* Popularity Score Section - Using FormField */}
+          {(dbVideoId || initialData?.id) && (
+            <FormField
+              control={form.control}
+              name="popularityScore" // Connects to schema, though primarily display + action here
+              render={() => (
+                // { field: _field_popularity }, // field marked as unused - REMOVED
+                <FormItem>
+                  <FormLabel>Popularity Score</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={
+                          currentPopularityScore === null ||
+                          currentPopularityScore === undefined
+                            ? "N/A"
+                            : currentPopularityScore.toFixed(4)
+                        }
+                        readOnly
+                        className="flex-grow bg-background"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon" // Made button smaller
+                        onClick={handleRecalculateScore}
+                        disabled={isRecalculatingScore}
+                        title="Recalculate Score"
+                      >
+                        <Loader2
+                          className={`h-4 w-4 ${isRecalculatingScore ? "animate-spin" : ""}`}
+                        />
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormDescription className="mt-2 text-xs">
+                    <Info className="inline-block h-3 w-3 mr-1 flex-shrink-0" />
+                    <span>
+                      Based on views, likes, and age. Higher is more popular.
+                      Auto-updates periodically.
+                    </span>
+                  </FormDescription>
+                  <FormMessage />{" "}
+                  {/* In case of future validation on this field */}
+                </FormItem>
+              )}
+            />
+          )}
+
+          {/* Published At Display Section - Using FormField */}
+          {(dbVideoId || initialData?.id) && initialData?.publishedAt && (
+            <FormField
+              control={form.control}
+              name="publishedAt" // Connects to schema
+              render={() => (
+                // { field: _field_publishedAt }, // field marked as unused - REMOVED
+                <FormItem>
+                  <FormLabel>Originally Published (YouTube)</FormLabel>
+                  <FormControl className="flex-grow">
+                    <Input value={displayPublishedAt} readOnly />
+                  </FormControl>
+                  <FormDescription className="mt-2 text-xs">
+                    The original publication date of the video on YouTube.
+                  </FormDescription>
+                  <FormMessage />{" "}
+                  {/* In case of future validation on this field */}
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
 
         <div className="flex items-center justify-end gap-2">
           <Button

@@ -177,6 +177,14 @@ export async function batchImportVideos(
           });
           videoCreateData.transcript = transcriptText;
 
+          // Add publishedAt from YouTube video data
+          if (
+            video.publishedAt &&
+            !isNaN(new Date(video.publishedAt).getTime())
+          ) {
+            videoCreateData.publishedAt = new Date(video.publishedAt);
+          }
+
           // Add popularityScore if it exists and video is published
           if (video.popularityScore !== undefined) {
             videoCreateData.popularityScore = video.popularityScore;

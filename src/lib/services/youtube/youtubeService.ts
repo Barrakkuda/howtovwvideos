@@ -303,10 +303,6 @@ export async function getYouTubeTranscript(
 export async function getYouTubeVideoInfo(
   videoId: string,
 ): Promise<YouTubeVideoInfoResponse> {
-  console.log(
-    `[DEBUG] getYouTubeVideoInfo CALLED for YouTube videoId: ${videoId}`,
-  );
-
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");
     return {
@@ -331,11 +327,6 @@ export async function getYouTubeVideoInfo(
   try {
     const response = await fetch(fetchUrl);
     const data = await response.json();
-
-    console.log(
-      "[DEBUG] Raw YouTube API response for videoId " + videoId + ":",
-      JSON.stringify(data, null, 2),
-    );
 
     if (!response.ok) {
       console.error("YouTube API Error:", data.error?.message || data);

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import VideoCard from "./VideoCard"; // Assuming VideoCardProps exports the video shape it needs
+import VideoCard, { type CategoryInfo } from "./VideoCard"; // Assuming VideoCardProps and CategoryInfo are exported
 import PaginationControls from "@/components/ui/PaginationControls";
 import { VideoStatus, Prisma } from "@generated/prisma";
 import { redirect } from "next/navigation";
@@ -26,7 +26,7 @@ interface VideoForCardDisplay {
   title: string;
   thumbnailUrl?: string | null;
   url?: string | null; // For linking, can be derived if using local video pages
-  // Add any other fields VideoCard will use, like channelTitle
+  categories?: CategoryInfo[]; // Added categories
 }
 
 async function fetchPublishedVideos({
@@ -103,17 +103,33 @@ async function fetchPublishedVideos({
       slug: true,
       title: true,
       thumbnailUrl: true,
-      videoId: true,
+      // videoId: true, // This was selected before, but not used in VideoForCardDisplay directly
+      categories: {
+        // Include categories
+        select: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      },
     },
   });
 
-  // Since we're filtering by slug in the query, we can safely cast it as string
   const videos: VideoForCardDisplay[] = videosData.map((v) => ({
     id: v.id,
-    slug: v.slug as string, // Safe to cast since we filtered in the query
+    slug: v.slug as string,
     title: v.title,
     thumbnailUrl: v.thumbnailUrl,
     url: `/video/${v.slug}`,
+    categories: v.categories.map((catOnVideo) => ({
+      id: catOnVideo.category.id,
+      name: catOnVideo.category.name,
+      slug: catOnVideo.category.slug!,
+    })),
   }));
 
   const totalPages = Math.ceil(totalVideos / limit);
@@ -178,6 +194,7 @@ export default async function VideoGrid({
   const totalPages = Math.ceil(totalVideos / itemsPerPage);
 
   // Validate page number
+  let actualCurrentPage = currentPage;
   if (currentPage < 1 || (totalPages > 0 && currentPage > totalPages)) {
     // Determine the base path for redirection
     let basePath = "/";
@@ -191,18 +208,24 @@ export default async function VideoGrid({
       basePath = `/tag/${tagSlug}`;
     }
 
-    // Redirect to the first page
-    redirect(basePath);
+    if (totalPages > 0 && currentPage > totalPages) {
+      actualCurrentPage = totalPages; // or 1, or redirect
+      redirect(`${basePath}?page=${totalPages > 0 ? totalPages : 1}`);
+    } else if (currentPage < 1) {
+      actualCurrentPage = 1;
+      redirect(`${basePath}?page=1`);
+    }
+    // If totalPages is 0, currentPage will be 1, no redirect needed unless it was explicitly < 1
   }
 
   // If we get here, the page number is valid, so fetch the videos
   const {
     videos,
-    currentPage: actualCurrentPage,
+    // currentPage: actualCurrentPage, // already handled
     hasNextPage,
     hasPrevPage,
   } = await fetchPublishedVideos({
-    page: currentPage,
+    page: actualCurrentPage, // Use validated page number
     limit: itemsPerPage,
     vwTypeSlug,
     categorySlug,

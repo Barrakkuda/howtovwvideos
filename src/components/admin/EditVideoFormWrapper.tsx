@@ -61,6 +61,7 @@ export default function EditVideoFormWrapper({
     tags: video.tags ? video.tags.map((tov) => tov.tag.name) : [],
     vwTypes: video.vwTypes.map((vot) => vot.vwType.slug) || [],
     popularityScore: video.popularityScore ?? undefined,
+    publishedAt: video.publishedAt || undefined,
   };
 
   async function handleSubmitVideo(data: VideoFormData) {
