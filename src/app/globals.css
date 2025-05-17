@@ -90,3 +90,15 @@
 .animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
 }
+
+/* Custom Carousel Styles */
+.hero-carousel-container > [role="region"] > .overflow-hidden {
+  height: 100%; /* Force the Embla viewport to take full height of its parent */
+}
+
+/* 
+  Alternative if the above doesn't work (inspect to find the exact viewport class/selector):
+.hero-carousel-container .embla__viewport {
+  height: 100% !important;
+}
+*/

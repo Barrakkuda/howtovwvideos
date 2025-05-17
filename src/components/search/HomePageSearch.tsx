@@ -45,21 +45,21 @@ export default function HomePageSearch() {
     <div className="mb-8 flex justify-center">
       <form
         onSubmit={handleSearchSubmit}
-        className="flex w-full max-w-lg items-center space-x-2 p-4 bg-neutral-100 dark:bg-neutral-800 rounded-lg shadow-md"
+        className="flex w-full items-center space-x-2"
       >
         <Input
           type="search"
           placeholder="Search for how-to videos..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-grow bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 placeholder-neutral-500 dark:placeholder-neutral-400 focus:ring-2 focus:ring-blue-500 border-neutral-300 dark:border-neutral-600"
+          className="h-16 flex-grow bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 placeholder-neutral-500 dark:placeholder-neutral-400 placeholder:text-xl focus:ring-2 focus:ring-blue-500 border-neutral-300 dark:border-neutral-600"
           aria-label="Search videos"
         />
         <Button
           type="submit"
           variant="default"
           size="lg"
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="text-xl bg-blue-600 hover:bg-blue-700 text-white h-16"
         >
           <SearchIcon className="mr-2 h-5 w-5" />
           Search
