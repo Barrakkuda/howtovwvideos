@@ -108,6 +108,14 @@ export const columns: ColumnDef<VideoForTable>[] = [
     enableGlobalFilter: true,
   },
   {
+    accessorKey: "slug",
+    header: "Slug",
+    cell: ({ row }) => (
+      <div className="font-mono text-xs">{row.getValue("slug")}</div>
+    ),
+    enableGlobalFilter: true,
+  },
+  {
     accessorKey: "categories",
     header: "Categories",
     cell: ({ row }) => {

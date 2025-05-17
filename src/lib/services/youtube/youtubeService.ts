@@ -43,6 +43,11 @@ interface YouTubeApiItem {
     channelTitle: string;
     publishedAt: string;
   };
+  statistics: {
+    viewCount: string;
+    likeCount: string;
+    commentCount: string;
+  };
 }
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_DATA_API_KEY;
@@ -79,7 +84,7 @@ export async function searchYouTubeVideos(
   const params = new URLSearchParams({
     key: YOUTUBE_API_KEY,
     q: query,
-    part: "snippet",
+    part: "snippet,statistics",
     type: "video",
   });
   params.append("maxResults", maxResults.toString());
@@ -130,6 +135,44 @@ export async function searchYouTubeVideos(
           selectedThumbnailUrl = thumbs.medium.url;
         }
 
+        const snippet = item.snippet;
+        const statistics = item.statistics;
+
+        if (!snippet || !statistics) {
+          console.warn(
+            `Snippet or statistics missing for video ID: ${item.id.videoId}`,
+          );
+          return null;
+        }
+
+        // --- Calculate Popularity Score ---
+        const now = new Date();
+        const publishedDate = new Date(snippet.publishedAt);
+        const ageInMilliseconds = now.getTime() - publishedDate.getTime();
+
+        // Calculate age in days. Ensure at least 1 day to avoid division by zero for brand new videos.
+        const ageInDays = Math.max(
+          1,
+          ageInMilliseconds / (1000 * 60 * 60 * 24),
+        );
+
+        const viewCount = parseInt(statistics.viewCount) || 0;
+        const likeCount = parseInt(statistics.likeCount) || 0;
+        //const commentCount = parseInt(item.statistics.commentCount) || 0;
+
+        const viewsPerDay = viewCount / ageInDays;
+        const likesPerDay = likeCount / ageInDays;
+        // const commentsPerDay = commentCount / ageInDays; // If using comments
+
+        // Define weights for each factor (these are subjective and can be tuned)
+        const WEIGHT_VIEWS_RATE = 0.6; // Give more weight to view velocity
+        const WEIGHT_LIKES_RATE = 0.4; // Give less weight to like velocity
+        // const WEIGHT_COMMENTS_RATE = 0.1; // Example if adding comments
+
+        const popularityScore =
+          WEIGHT_VIEWS_RATE * viewsPerDay + WEIGHT_LIKES_RATE * likesPerDay;
+        // + (WEIGHT_COMMENTS_RATE * commentsPerDay); // If using comments
+
         return {
           id: item.id.videoId,
           title: decodeHtmlEntities(item.snippet.title),
@@ -137,6 +180,7 @@ export async function searchYouTubeVideos(
           thumbnailUrl: selectedThumbnailUrl,
           channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
           channelUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.snippet.channelTitle)}`,
+          popularityScore: parseFloat(popularityScore.toFixed(4)),
           publishedAt: item.snippet.publishedAt,
         };
       }),

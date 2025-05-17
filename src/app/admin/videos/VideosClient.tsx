@@ -510,6 +510,7 @@ export default function AdminVideosPageClient() {
         onRowSelectionChange={setRowSelection}
         onResetTableConfig={handleResetTableConfig}
         bulkActions={videoBulkActions}
+        initialColumnPinning={{ right: ["actions"] }}
       />
 
       {videosToBulkDelete.length > 0 && (

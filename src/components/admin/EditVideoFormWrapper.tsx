@@ -47,6 +47,7 @@ export default function EditVideoFormWrapper({
   const initialFormData: Partial<VideoFormData> = {
     videoId: video.videoId,
     title: video.title,
+    slug: video.slug || "",
     description: video.description || "",
     url: video.url || "",
     thumbnailUrl: video.thumbnailUrl || "",

@@ -7,6 +7,7 @@ import {
   VisibilityState,
   PaginationState,
   Row,
+  ColumnPinningState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -101,6 +102,8 @@ interface DataTableProps<TData, TValue> {
   onResetTableConfig: () => void;
   bulkActions?: BulkAction<TData>[];
   pageCount?: number;
+  enableColumnPinning?: boolean; // Added prop
+  initialColumnPinning?: ColumnPinningState; // <<< ADD THIS LINE
 }
 
 // --- Helper Functions ---
@@ -175,6 +178,8 @@ export function DataTable<TData, TValue>({
   onResetTableConfig,
   bulkActions = [],
   pageCount,
+  enableColumnPinning = true, // Default to true
+  initialColumnPinning, // <<< ADD THIS LINE
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable<TData>({
     data,
@@ -186,6 +191,9 @@ export function DataTable<TData, TValue>({
       rowSelection,
       globalFilter,
       pagination,
+    },
+    initialState: {
+      columnPinning: initialColumnPinning,
     },
     // Pipeline
     getCoreRowModel: getCoreRowModel(),
@@ -212,6 +220,7 @@ export function DataTable<TData, TValue>({
     filterFns: {
       arrIncludesSome,
     },
+    enableColumnPinning: enableColumnPinning, // Added option
   });
 
   return (
@@ -419,7 +428,17 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan}>
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className={
+                      header.column.getIsPinned() === "right"
+                        ? "sticky right-0 bg-background z-10 shadow-md"
+                        : header.column.getIsPinned() === "left"
+                          ? "sticky left-0 bg-background z-10 shadow-md"
+                          : ""
+                    }
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -439,7 +458,16 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={
+                        cell.column.getIsPinned() === "right"
+                          ? "sticky right-0 bg-background z-10 shadow-md"
+                          : cell.column.getIsPinned() === "left"
+                            ? "sticky left-0 bg-background z-10 shadow-md"
+                            : ""
+                      }
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),

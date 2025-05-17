@@ -28,7 +28,7 @@ export default function VideoCard({ video }: VideoCardProps) {
   const videoLink = video.url || `/video/${video.slug}`;
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl">
+    <div className="rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl">
       <Link href={videoLink} className="block group">
         <div className="relative w-full aspect-video bg-neutral-200 dark:bg-neutral-700">
           <Image
@@ -40,9 +40,10 @@ export default function VideoCard({ video }: VideoCardProps) {
             priority={false} // Set to true for above-the-fold images if applicable
           />
         </div>
-        <div className="p-4">
+        <div className="py-4">
           <h3
-            className="text-md sm:text-lg font-semibold text-neutral-800 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate"
+            className="text-md sm:text-md font-semibold text-neutral-800 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 overflow-hidden"
+            style={{ display: "-webkit-box", WebkitBoxOrient: "vertical" }}
             title={video.title}
           >
             {video.title}
