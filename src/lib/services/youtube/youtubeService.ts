@@ -10,7 +10,6 @@ export interface YouTubeVideoItem {
   publishedAt: string;
   viewCount?: number;
   likeCount?: number;
-  commentCount?: number;
   popularityScore?: number;
 }
 
@@ -67,6 +66,67 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'");
+}
+
+export function calculatePopularityScore(
+  viewCountInput: number | undefined | null,
+  likeCountInput: number | undefined | null,
+  publishedAt: string | Date | undefined | null,
+): number | null {
+  // The main check for publishedAt is still critical
+  if (!publishedAt) {
+    console.log(
+      "[DEBUG] calculatePopularityScore returning null due to missing publishedAt.",
+    );
+    return null;
+  }
+
+  const views = Number(viewCountInput); // Number(null) is 0, Number(undefined) is NaN. We addressed this in getYouTubeVideoInfo.
+  const likes = Number(likeCountInput); // Number(null) is 0, Number(undefined) is NaN. We addressed this in getYouTubeVideoInfo.
+
+  // If views or likes became NaN here, it means the input from getYouTubeVideoInfo was not properly defaulted.
+  // However, with the changes in getYouTubeVideoInfo, views and likes should be numbers (or 0).
+
+  const now = new Date();
+  const publishedDate = new Date(publishedAt);
+  if (isNaN(publishedDate.getTime())) {
+    // More robust date check
+    console.log(
+      "[DEBUG] calculatePopularityScore returning null due to invalid publishedAt date.",
+    );
+    return null;
+  }
+  const ageInMilliseconds = now.getTime() - publishedDate.getTime();
+  const ageInDays = Math.max(1, ageInMilliseconds / (1000 * 60 * 60 * 24));
+
+  // It's good practice to check if ageInDays is valid, though Math.max(1,...) should prevent division by zero or NaN here.
+  if (isNaN(ageInDays) || ageInDays <= 0) {
+    console.log(
+      "[DEBUG] calculatePopularityScore returning null due to invalid ageInDays.",
+    );
+    return null;
+  }
+
+  const viewsPerDay = views / ageInDays;
+  const likesPerDay = likes / ageInDays;
+
+  // Define weights for each factor
+  const WEIGHT_VIEWS_RATE = 0.6;
+  const WEIGHT_LIKES_RATE = 0.4;
+
+  const score =
+    WEIGHT_VIEWS_RATE * viewsPerDay + WEIGHT_LIKES_RATE * likesPerDay;
+  if (isNaN(score)) {
+    console.log("[DEBUG] Score is NaN. Inputs:", {
+      views,
+      likes,
+      ageInDays,
+      viewsPerDay,
+      likesPerDay,
+    });
+    return null; // Explicitly return null if score is NaN
+  }
+  return parseFloat(score.toFixed(4));
 }
 
 export async function searchYouTubeVideos(
@@ -243,6 +303,10 @@ export async function getYouTubeTranscript(
 export async function getYouTubeVideoInfo(
   videoId: string,
 ): Promise<YouTubeVideoInfoResponse> {
+  console.log(
+    `[DEBUG] getYouTubeVideoInfo CALLED for YouTube videoId: ${videoId}`,
+  );
+
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");
     return {
@@ -267,6 +331,11 @@ export async function getYouTubeVideoInfo(
   try {
     const response = await fetch(fetchUrl);
     const data = await response.json();
+
+    console.log(
+      "[DEBUG] Raw YouTube API response for videoId " + videoId + ":",
+      JSON.stringify(data, null, 2),
+    );
 
     if (!response.ok) {
       console.error("YouTube API Error:", data.error?.message || data);
@@ -303,31 +372,20 @@ export async function getYouTubeVideoInfo(
     const channelUrl = `https://www.youtube.com/channel/${channelId}`;
 
     // --- Calculate Popularity Score ---
-    const now = new Date();
-    const publishedDate = new Date(snippet.publishedAt);
-    const ageInMilliseconds = now.getTime() - publishedDate.getTime();
-
-    // Calculate age in days. Ensure at least 1 day to avoid division by zero for brand new videos.
-    const ageInDays = Math.max(1, ageInMilliseconds / (1000 * 60 * 60 * 24));
-
     const viewCount = statistics ? parseInt(statistics.viewCount) || 0 : 0;
     const likeCount = statistics ? parseInt(statistics.likeCount) || 0 : 0;
-    // const commentCount = statistics
-    //   ? parseInt(statistics.commentCount) || 0
-    //   : 0;
 
-    const viewsPerDay = viewCount / ageInDays;
-    const likesPerDay = likeCount / ageInDays;
-    // const commentsPerDay = commentCount / ageInDays;
+    console.log("[DEBUG] Values passed to calculatePopularityScore:", {
+      viewCount,
+      likeCount,
+      publishedAt: snippet?.publishedAt,
+    });
 
-    // Define weights for each factor (these are subjective and can be tuned)
-    const WEIGHT_VIEWS_RATE = 0.6; // Give more weight to view velocity
-    const WEIGHT_LIKES_RATE = 0.4; // Give less weight to like velocity
-    // const WEIGHT_COMMENTS_RATE = 0.1; // Example if adding comments
-
-    const popularityScore =
-      WEIGHT_VIEWS_RATE * viewsPerDay + WEIGHT_LIKES_RATE * likesPerDay;
-    // + (WEIGHT_COMMENTS_RATE * commentsPerDay); // If using comments
+    const popularityScoreValue = calculatePopularityScore(
+      viewCount,
+      likeCount,
+      snippet?.publishedAt,
+    );
 
     const videoInfo: YouTubeVideoItem = {
       id: item.id,
@@ -337,12 +395,10 @@ export async function getYouTubeVideoInfo(
       channelTitle: decodeHtmlEntities(snippet.channelTitle),
       channelUrl,
       publishedAt: snippet.publishedAt,
-      viewCount: statistics ? parseInt(statistics.viewCount) || 0 : undefined,
-      likeCount: statistics ? parseInt(statistics.likeCount) || 0 : undefined,
-      // commentCount: statistics
-      //   ? parseInt(statistics.commentCount) || 0
-      //   : undefined,
-      popularityScore: parseFloat(popularityScore.toFixed(4)),
+      viewCount: viewCount,
+      likeCount: likeCount,
+      popularityScore:
+        popularityScoreValue === null ? undefined : popularityScoreValue,
     };
 
     return { success: true, data: videoInfo };

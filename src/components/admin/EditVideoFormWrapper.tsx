@@ -45,6 +45,7 @@ export default function EditVideoFormWrapper({
   // This is important if the Video model has fields/types not directly usable by the form
   // or if VideoFormData has a slightly different structure.
   const initialFormData: Partial<VideoFormData> = {
+    id: video.id,
     videoId: video.videoId,
     title: video.title,
     slug: video.slug || "",
@@ -59,6 +60,7 @@ export default function EditVideoFormWrapper({
     transcript: video.transcript || "",
     tags: video.tags ? video.tags.map((tov) => tov.tag.name) : [],
     vwTypes: video.vwTypes.map((vot) => vot.vwType.slug) || [],
+    popularityScore: video.popularityScore ?? undefined,
   };
 
   async function handleSubmitVideo(data: VideoFormData) {
@@ -95,6 +97,7 @@ export default function EditVideoFormWrapper({
             value: vt.slug,
           }))}
           initialData={initialFormData}
+          dbVideoId={video.id}
           onSubmit={handleSubmitVideo}
           isSubmitting={isSubmitting}
         />

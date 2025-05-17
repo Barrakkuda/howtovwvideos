@@ -4,6 +4,7 @@ import { slugSchema } from "./commonSchemas";
 
 export const videoSchema = z.object({
   platform: z.nativeEnum(VideoPlatform),
+  id: z.number().optional(),
   videoId: z.string().min(1, "Video ID is required"),
   title: z.string().min(3, "Title must be at least 3 characters long"),
   description: z.string().optional(),
@@ -32,6 +33,7 @@ export const videoSchema = z.object({
   tags: z.array(z.string()).optional().default([]),
   vwTypes: z.array(z.string()).optional().default([]),
   transcript: z.string().optional(),
+  popularityScore: z.number().nullable().optional(),
 });
 
 export type VideoFormData = z.infer<typeof videoSchema>;

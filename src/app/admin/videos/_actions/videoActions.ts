@@ -573,3 +573,172 @@ export async function bulkGenerateSlugsForVideos(
 }
 
 // --- Bulk Actions End ---
+
+interface UpdateScoreResult {
+  videoId: number; // internal DB ID
+  youtubeVideoId?: string;
+  success: boolean;
+  newScore?: number | null;
+  message: string;
+}
+
+export async function updatePopularityScores(
+  internalVideoIds: number[],
+): Promise<UpdateScoreResult[]> {
+  const results: UpdateScoreResult[] = [];
+
+  if (!internalVideoIds || internalVideoIds.length === 0) {
+    return [
+      {
+        videoId: 0,
+        success: false,
+        message: "No video IDs provided.",
+      },
+    ];
+  }
+
+  for (const internalId of internalVideoIds) {
+    let youtubeVideoIdForDisplay: string | undefined = undefined;
+    try {
+      const video = await prisma.video.findUnique({
+        where: { id: internalId },
+        select: { id: true, videoId: true }, // Only need youtube videoId from DB
+      });
+
+      if (!video) {
+        results.push({
+          videoId: internalId,
+          success: false,
+          message: "Video not found in database.",
+        });
+        continue;
+      }
+
+      if (!video.videoId) {
+        results.push({
+          videoId: internalId,
+          success: false,
+          message: "Video is missing YouTube Video ID.",
+        });
+        continue;
+      }
+      youtubeVideoIdForDisplay = video.videoId;
+
+      const ytVideoInfo = await getYouTubeVideoInfo(video.videoId);
+
+      if (ytVideoInfo.success && ytVideoInfo.data) {
+        const newScore =
+          ytVideoInfo.data.popularityScore === undefined
+            ? null
+            : ytVideoInfo.data.popularityScore;
+
+        if (newScore !== null) {
+          await prisma.video.update({
+            where: { id: internalId },
+            data: { popularityScore: newScore },
+          });
+          results.push({
+            videoId: internalId,
+            youtubeVideoId: youtubeVideoIdForDisplay,
+            success: true,
+            newScore: newScore,
+            message: "Popularity score updated.",
+          });
+        } else {
+          results.push({
+            videoId: internalId,
+            youtubeVideoId: youtubeVideoIdForDisplay,
+            success: false,
+            newScore: null,
+            message:
+              "New popularity score could not be determined from YouTube info (possibly null).",
+          });
+        }
+      } else {
+        results.push({
+          videoId: internalId,
+          youtubeVideoId: youtubeVideoIdForDisplay,
+          success: false,
+          message: `Failed to fetch YouTube info: ${ytVideoInfo.error || "Unknown YouTube API error"}`,
+        });
+      }
+    } catch (error) {
+      results.push({
+        videoId: internalId,
+        youtubeVideoId: youtubeVideoIdForDisplay,
+        success: false,
+        message:
+          error instanceof Error ? error.message : "An unknown error occurred.",
+      });
+    }
+  }
+
+  if (results.some((r) => r.success)) {
+    revalidatePath("/admin/videos");
+    revalidatePath("/admin/dashboard");
+  }
+
+  return results;
+}
+
+export async function recalculateVideoPopularityScore(
+  internalVideoId: number,
+): Promise<{
+  success: boolean;
+  newScore?: number | null;
+  message: string;
+}> {
+  try {
+    const video = await prisma.video.findUnique({
+      where: { id: internalVideoId },
+      select: { videoId: true }, // Only need YouTube videoId
+    });
+
+    if (!video || !video.videoId) {
+      return {
+        success: false,
+        message: "Video not found or missing YouTube video ID.",
+      };
+    }
+
+    const ytVideoInfo = await getYouTubeVideoInfo(video.videoId);
+
+    if (ytVideoInfo.success && ytVideoInfo.data) {
+      const newScore =
+        ytVideoInfo.data.popularityScore === undefined
+          ? null
+          : ytVideoInfo.data.popularityScore;
+
+      await prisma.video.update({
+        where: { id: internalVideoId },
+        data: { popularityScore: newScore },
+      });
+
+      revalidatePath("/admin/videos");
+      revalidatePath(`/admin/videos/edit/${internalVideoId}`);
+
+      return {
+        success: true,
+        newScore,
+        message: "Popularity score recalculated and updated successfully.",
+      };
+    } else {
+      return {
+        success: false,
+        message: `Failed to fetch YouTube info: ${ytVideoInfo.error || "Unknown YouTube API error"}`,
+      };
+    }
+  } catch (error) {
+    console.error(
+      `Error recalculating score for video ${internalVideoId}:`,
+      error,
+    );
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An unknown error occurred during score recalculation.",
+    };
+  }
+}

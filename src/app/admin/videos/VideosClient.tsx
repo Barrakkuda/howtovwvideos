@@ -51,6 +51,7 @@ import {
 import {
   bulkDeleteVideos,
   bulkGenerateSlugsForVideos,
+  updatePopularityScores,
 } from "./_actions/videoActions";
 
 // Debounce Utility
@@ -124,6 +125,10 @@ export default function AdminVideosPageClient() {
   const [allVwTypes, setAllVwTypes] = useState<NavigationVWType[]>([]);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [videosToBulkDelete, setVideosToBulkDelete] = useState<
+    Row<VideoForTable>[]
+  >([]);
+  const [showUpdateScoresDialog, setShowUpdateScoresDialog] = useState(false);
+  const [videosToUpdateScores, setVideosToUpdateScores] = useState<
     Row<VideoForTable>[]
   >([]);
 
@@ -414,6 +419,59 @@ export default function AdminVideosPageClient() {
     [loadData],
   );
 
+  const handleBulkUpdateScores = async () => {
+    if (videosToUpdateScores.length === 0) {
+      toast.info("No videos selected to update scores.");
+      setShowUpdateScoresDialog(false);
+      return;
+    }
+    const videoIds = videosToUpdateScores.map((row) => row.original.id);
+    toast.info(`Updating popularity scores for ${videoIds.length} video(s)...`);
+
+    try {
+      const results = await updatePopularityScores(videoIds);
+      let successCount = 0;
+      let failureCount = 0;
+      results.forEach((result) => {
+        if (result.success) {
+          successCount++;
+          // Optional: toast per video, or just a summary
+        } else {
+          failureCount++;
+          toast.error(
+            `Failed for Video ID ${result.videoId}: ${result.message}`,
+          );
+        }
+      });
+
+      if (successCount > 0) {
+        toast.success(
+          `${successCount} video(s) had their popularity scores updated successfully.`,
+        );
+      }
+      if (failureCount > 0) {
+        toast.warning(
+          `${failureCount} video(s) failed to update. Check console/server logs for details.`,
+        );
+      } else if (successCount === 0 && failureCount === 0) {
+        toast.info(
+          "No scores were updated (perhaps no videos selected or an unexpected issue). ",
+        );
+      }
+      if (successCount > 0 || failureCount > 0) {
+        // Refresh if any action was attempted and might have changed data
+        loadData();
+      }
+    } catch (error) {
+      toast.error("An error occurred while bulk updating scores.");
+      console.error("Bulk update scores error:", error);
+    } finally {
+      setShowUpdateScoresDialog(false);
+      setVideosToUpdateScores([]);
+      setRowSelection({});
+    }
+  };
+
   // Define bulk actions array
   const videoBulkActions: BulkAction<VideoForTable>[] = useMemo(
     () => [
@@ -421,6 +479,14 @@ export default function AdminVideosPageClient() {
         label: "Generate Slug(s)",
         icon: Sparkles,
         action: handleBulkGenerateSlugs,
+      },
+      {
+        label: "Update Popularity Scores",
+        icon: Sparkles,
+        action: (selectedRows) => {
+          setVideosToUpdateScores(selectedRows);
+          setShowUpdateScoresDialog(true);
+        },
       },
       {
         label: "Delete Selected",
@@ -540,6 +606,29 @@ export default function AdminVideosPageClient() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* Confirmation Dialog for Updating Scores */}
+      <AlertDialog
+        open={showUpdateScoresDialog}
+        onOpenChange={setShowUpdateScoresDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update Popularity Scores?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to attempt to update the popularity scores
+              for the {videosToUpdateScores.length} selected video(s)? This will
+              fetch fresh data from YouTube.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkUpdateScores}>
+              Update Scores
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

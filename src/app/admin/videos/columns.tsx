@@ -174,10 +174,24 @@ export const columns: ColumnDef<VideoForTable>[] = [
   },
   {
     accessorKey: "popularityScore",
-    header: "Popularity",
-    cell: ({ row }) => (
-      <div className="text-xs">{row.getValue("popularityScore")}</div>
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Popularity
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
     ),
+    cell: ({ row }) => {
+      const score = row.getValue("popularityScore") as number | null;
+      return (
+        <div className="text-xs text-right tabular-nums w-[80px]">
+          {score !== null && score !== undefined ? score.toFixed(2) : ""}
+        </div>
+      );
+    },
+    enableSorting: true,
     enableGlobalFilter: true,
   },
   {

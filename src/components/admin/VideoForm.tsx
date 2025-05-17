@@ -41,13 +41,15 @@ import {
   getVideoTranscript,
   analyzeVideoWithOpenAI,
   refetchVideoInfo,
+  recalculateVideoPopularityScore,
 } from "@/app/admin/videos/_actions/videoActions";
 import { OpenAIAnalysisResponse } from "@/app/admin/youtube-import/_actions/importActions";
 
 interface VideoFormProps {
   categories: Category[];
   vwTypeOptions: { label: string; value: string }[];
-  initialData?: Partial<VideoFormData>;
+  initialData?: Partial<VideoFormData> & { id?: number };
+  dbVideoId?: number;
   onSubmit: (data: VideoFormData) => Promise<void>;
   isSubmitting: boolean;
 }
@@ -56,6 +58,7 @@ export default function VideoForm({
   categories,
   vwTypeOptions,
   initialData,
+  dbVideoId,
   onSubmit,
   isSubmitting,
 }: VideoFormProps) {
@@ -68,6 +71,10 @@ export default function VideoForm({
     error: string | null;
   }>({ analysis: null, error: null });
   const [showPublishMessage, setShowPublishMessage] = useState(false);
+  const [currentPopularityScore, setCurrentPopularityScore] = useState<
+    number | null | undefined
+  >(initialData?.popularityScore);
+  const [isRecalculatingScore, setIsRecalculatingScore] = useState(false);
 
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema) as unknown as Resolver<VideoFormData>,
@@ -87,6 +94,7 @@ export default function VideoForm({
           tags: initialData.tags || [],
           vwTypes: initialData.vwTypes || [],
           transcript: initialData.transcript ?? "",
+          popularityScore: initialData.popularityScore ?? undefined,
         }
       : {
           platform: VideoPlatform.YOUTUBE,
@@ -103,6 +111,7 @@ export default function VideoForm({
           tags: [],
           vwTypes: [],
           transcript: "",
+          popularityScore: undefined,
         },
   });
 
@@ -331,6 +340,32 @@ export default function VideoForm({
     } finally {
       setIsRefetchingInfo(false);
     }
+  };
+
+  const handleRecalculateScore = async () => {
+    const videoIdToUse = dbVideoId ?? initialData?.id;
+    if (!videoIdToUse) {
+      toast.error("Video ID is not available. Cannot recalculate score.");
+      return;
+    }
+    setIsRecalculatingScore(true);
+    try {
+      const result = await recalculateVideoPopularityScore(videoIdToUse);
+      if (result.success) {
+        toast.success(result.message);
+        setCurrentPopularityScore(result.newScore);
+        // Optionally update form value if you want it to be part of the form state for some reason
+        // form.setValue("popularityScore", result.newScore, { shouldValidate: true });
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error(
+        "An unexpected error occurred while recalculating the score.",
+      );
+      console.error("Recalculate score error:", error);
+    }
+    setIsRecalculatingScore(false);
   };
 
   async function handleSubmit(data: VideoFormData) {
@@ -861,6 +896,37 @@ export default function VideoForm({
               </div>
             )}
           </>
+        )}
+
+        {/* Popularity Score Display and Recalculate Button */}
+        {(dbVideoId || initialData?.id) && ( // Only show if editing an existing video
+          <div className="space-y-2">
+            <FormLabel>Popularity Score</FormLabel>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={
+                  currentPopularityScore !== null &&
+                  currentPopularityScore !== undefined
+                    ? currentPopularityScore.toFixed(2)
+                    : ""
+                }
+                readOnly
+                className="w-24 bg-muted"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRecalculateScore}
+                disabled={isRecalculatingScore || isSubmitting}
+              >
+                {isRecalculatingScore ? "Recalculating..." : "Recalculate"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Current score. Click to recalculate based on latest YouTube stats.
+            </p>
+          </div>
         )}
 
         <div className="flex items-center justify-end gap-2">
