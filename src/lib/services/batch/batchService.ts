@@ -177,6 +177,11 @@ export async function batchImportVideos(
           });
           videoCreateData.transcript = transcriptText;
 
+          // Add popularityScore if it exists and video is published
+          if (video.popularityScore !== undefined) {
+            videoCreateData.popularityScore = video.popularityScore;
+          }
+
           // Handle categories
           const categoryIdsToLink: number[] = [];
           let categoriesSource: string | undefined;

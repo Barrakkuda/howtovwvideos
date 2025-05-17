@@ -8,6 +8,10 @@ export interface YouTubeVideoItem {
   channelTitle: string;
   channelUrl: string;
   publishedAt: string;
+  viewCount?: number;
+  likeCount?: number;
+  commentCount?: number;
+  popularityScore?: number;
 }
 
 export interface YouTubeSearchResponse {
@@ -42,8 +46,9 @@ interface YouTubeApiItem {
     };
     channelTitle: string;
     publishedAt: string;
+    channelId: string;
   };
-  statistics: {
+  statistics?: {
     viewCount: string;
     likeCount: string;
     commentCount: string;
@@ -84,7 +89,7 @@ export async function searchYouTubeVideos(
   const params = new URLSearchParams({
     key: YOUTUBE_API_KEY,
     q: query,
-    part: "snippet,statistics",
+    part: "snippet",
     type: "video",
   });
   params.append("maxResults", maxResults.toString());
@@ -136,42 +141,13 @@ export async function searchYouTubeVideos(
         }
 
         const snippet = item.snippet;
-        const statistics = item.statistics;
 
-        if (!snippet || !statistics) {
+        if (!snippet) {
           console.warn(
             `Snippet or statistics missing for video ID: ${item.id.videoId}`,
           );
           return null;
         }
-
-        // --- Calculate Popularity Score ---
-        const now = new Date();
-        const publishedDate = new Date(snippet.publishedAt);
-        const ageInMilliseconds = now.getTime() - publishedDate.getTime();
-
-        // Calculate age in days. Ensure at least 1 day to avoid division by zero for brand new videos.
-        const ageInDays = Math.max(
-          1,
-          ageInMilliseconds / (1000 * 60 * 60 * 24),
-        );
-
-        const viewCount = parseInt(statistics.viewCount) || 0;
-        const likeCount = parseInt(statistics.likeCount) || 0;
-        //const commentCount = parseInt(item.statistics.commentCount) || 0;
-
-        const viewsPerDay = viewCount / ageInDays;
-        const likesPerDay = likeCount / ageInDays;
-        // const commentsPerDay = commentCount / ageInDays; // If using comments
-
-        // Define weights for each factor (these are subjective and can be tuned)
-        const WEIGHT_VIEWS_RATE = 0.6; // Give more weight to view velocity
-        const WEIGHT_LIKES_RATE = 0.4; // Give less weight to like velocity
-        // const WEIGHT_COMMENTS_RATE = 0.1; // Example if adding comments
-
-        const popularityScore =
-          WEIGHT_VIEWS_RATE * viewsPerDay + WEIGHT_LIKES_RATE * likesPerDay;
-        // + (WEIGHT_COMMENTS_RATE * commentsPerDay); // If using comments
 
         return {
           id: item.id.videoId,
@@ -180,8 +156,13 @@ export async function searchYouTubeVideos(
           thumbnailUrl: selectedThumbnailUrl,
           channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
           channelUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.snippet.channelTitle)}`,
-          popularityScore: parseFloat(popularityScore.toFixed(4)),
           publishedAt: item.snippet.publishedAt,
+          viewCount: item.statistics
+            ? parseInt(item.statistics.viewCount) || 0
+            : undefined,
+          likeCount: item.statistics
+            ? parseInt(item.statistics.likeCount) || 0
+            : undefined,
         };
       }),
     );
@@ -278,7 +259,7 @@ export async function getYouTubeVideoInfo(
   const params = new URLSearchParams({
     key: YOUTUBE_API_KEY,
     id: videoId,
-    part: "snippet",
+    part: "snippet,statistics",
   });
 
   const fetchUrl = `${YOUTUBE_API_URL.replace("/search", "/videos")}?${params.toString()}`;
@@ -303,7 +284,10 @@ export async function getYouTubeVideoInfo(
     }
 
     const item = data.items[0];
-    const thumbs = item.snippet.thumbnails;
+    const snippet = item.snippet;
+    const statistics = item.statistics;
+
+    const thumbs = snippet.thumbnails;
     let selectedThumbnailUrl = thumbs.default.url;
 
     if (thumbs.standard?.url) {
@@ -315,17 +299,50 @@ export async function getYouTubeVideoInfo(
     }
 
     // Get channel ID from the snippet
-    const channelId = item.snippet.channelId;
+    const channelId = snippet.channelId;
     const channelUrl = `https://www.youtube.com/channel/${channelId}`;
+
+    // --- Calculate Popularity Score ---
+    const now = new Date();
+    const publishedDate = new Date(snippet.publishedAt);
+    const ageInMilliseconds = now.getTime() - publishedDate.getTime();
+
+    // Calculate age in days. Ensure at least 1 day to avoid division by zero for brand new videos.
+    const ageInDays = Math.max(1, ageInMilliseconds / (1000 * 60 * 60 * 24));
+
+    const viewCount = statistics ? parseInt(statistics.viewCount) || 0 : 0;
+    const likeCount = statistics ? parseInt(statistics.likeCount) || 0 : 0;
+    // const commentCount = statistics
+    //   ? parseInt(statistics.commentCount) || 0
+    //   : 0;
+
+    const viewsPerDay = viewCount / ageInDays;
+    const likesPerDay = likeCount / ageInDays;
+    // const commentsPerDay = commentCount / ageInDays;
+
+    // Define weights for each factor (these are subjective and can be tuned)
+    const WEIGHT_VIEWS_RATE = 0.6; // Give more weight to view velocity
+    const WEIGHT_LIKES_RATE = 0.4; // Give less weight to like velocity
+    // const WEIGHT_COMMENTS_RATE = 0.1; // Example if adding comments
+
+    const popularityScore =
+      WEIGHT_VIEWS_RATE * viewsPerDay + WEIGHT_LIKES_RATE * likesPerDay;
+    // + (WEIGHT_COMMENTS_RATE * commentsPerDay); // If using comments
 
     const videoInfo: YouTubeVideoItem = {
       id: item.id,
-      title: decodeHtmlEntities(item.snippet.title),
-      description: decodeHtmlEntities(item.snippet.description),
+      title: decodeHtmlEntities(snippet.title),
+      description: decodeHtmlEntities(snippet.description),
       thumbnailUrl: selectedThumbnailUrl,
-      channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
+      channelTitle: decodeHtmlEntities(snippet.channelTitle),
       channelUrl,
-      publishedAt: item.snippet.publishedAt,
+      publishedAt: snippet.publishedAt,
+      viewCount: statistics ? parseInt(statistics.viewCount) || 0 : undefined,
+      likeCount: statistics ? parseInt(statistics.likeCount) || 0 : undefined,
+      // commentCount: statistics
+      //   ? parseInt(statistics.commentCount) || 0
+      //   : undefined,
+      popularityScore: parseFloat(popularityScore.toFixed(4)),
     };
 
     return { success: true, data: videoInfo };

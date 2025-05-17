@@ -173,6 +173,14 @@ export const columns: ColumnDef<VideoForTable>[] = [
     enableGlobalFilter: false,
   },
   {
+    accessorKey: "popularityScore",
+    header: "Popularity",
+    cell: ({ row }) => (
+      <div className="text-xs">{row.getValue("popularityScore")}</div>
+    ),
+    enableGlobalFilter: true,
+  },
+  {
     accessorKey: "status",
     header: ({ column }) => (
       <Button

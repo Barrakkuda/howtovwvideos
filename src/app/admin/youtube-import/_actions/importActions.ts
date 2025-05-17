@@ -61,6 +61,8 @@ export async function importYouTubeVideo(
     return { success: false, message: "Invalid video data provided." };
   }
 
+  const generatedSlug = slugify(videoData.title, { lower: true, strict: true });
+
   // Fetch all existing VWType slugs for validation
   const allDbVwTypes = await prisma.vWType.findMany({
     select: { slug: true, name: true }, // Fetch slugs and names
@@ -123,6 +125,12 @@ export async function importYouTubeVideo(
       sourceKeyword: sourceKeyword,
       processedAt: new Date(),
       status: isHowToVWVideo ? VideoStatus.PUBLISHED : VideoStatus.REJECTED,
+      slug: generatedSlug,
+      // Add direct mapping for stats and score if they exist
+      ...(videoData.popularityScore !== undefined && {
+        popularityScore: videoData.popularityScore,
+      }),
+
       // Conditional fields based on isHowToVWVideo
       ...(isHowToVWVideo && {
         description: videoData.description || "",
