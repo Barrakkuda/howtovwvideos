@@ -10,6 +10,7 @@ import {
   VWTypesOnVideos,
   Tag,
   TagsOnVideos,
+  Channel,
 } from "@generated/prisma";
 import { cache } from "react";
 
@@ -24,6 +25,7 @@ export type PublicVideoDetails = Video & {
   tags: (TagsOnVideos & {
     tag: Tag;
   })[];
+  channel: Channel | null;
 };
 
 // Wrap the function with cache
@@ -53,6 +55,7 @@ export const getVideoBySlug = cache(
               tag: true,
             },
           },
+          channel: true, // Include channel data
           // VWTypes and tags are directly on the video model
         },
       });
