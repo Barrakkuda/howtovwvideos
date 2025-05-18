@@ -6,6 +6,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import React from "react";
+import slugify from "slugify";
 
 import { videoSchema, VideoFormData } from "@/lib/validators/video";
 import { Button } from "@/components/ui/button";
@@ -308,6 +309,8 @@ export default function VideoForm({
         // Ensure we have valid string values for required fields
         if (typeof title === "string") {
           form.setValue("title", title);
+          // Generate and set slug based on the new title
+          form.setValue("slug", slugify(title, { lower: true, strict: true }));
         }
 
         // Handle optional fields
@@ -447,7 +450,7 @@ export default function VideoForm({
             <FormItem>
               <FormLabel>Slug</FormLabel>
               <FormControl>
-                <Input placeholder="my-awesome-video" disabled {...field} />
+                <Input placeholder="my-awesome-video" readOnly {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

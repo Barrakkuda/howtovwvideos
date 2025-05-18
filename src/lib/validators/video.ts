@@ -6,8 +6,8 @@ import { slugSchema } from "./commonSchemas";
 const channelDataSchema = z
   .object({
     id: z.number(),
-    name: z.string(),
-    url: z.string().url(),
+    name: z.string().optional(),
+    url: z.string().url().optional(),
   })
   .optional();
 
