@@ -1,16 +1,9 @@
-// This file is effectively being moved from src/app/videos/type/[vwType]/page.tsx
-// to src/app/video/type/[vwType]/page.tsx.
-// The content of the file remains the same.
-
 import VideoGrid from "@/components/video/VideoGrid";
-import { prisma } from "@/lib/db"; // Import prisma client
-import { type VWType as VWTypeModel } from "@generated/prisma"; // Import the VWType model type
+import { prisma } from "@/lib/db";
+import { type VWType as VWTypeModel } from "@generated/prisma";
 import { notFound } from "next/navigation";
-import { Metadata } from "next"; // Import Metadata type
+import { Metadata } from "next";
 
-// Removed VWTypePageProps interface, will type props inline
-
-// Fetch VWType by slug from the database
 async function getVWTypeBySlug(
   slug: string | undefined,
 ): Promise<VWTypeModel | null> {
@@ -23,26 +16,21 @@ async function getVWTypeBySlug(
     });
     return vwType;
   } catch (error) {
-    // Preserve error logging but without the custom prefix for cleaner production logs
     console.error(`Error fetching VWType by slug '${slug}':`, error);
     return null;
   }
 }
 
-// Helper function to format VWType names for display
 function formatVWTypeName(name: string): string {
-  // The name field from the DB should already be well-formatted (e.g., "Off-Road", "Type 3")
-  // If not, specific formatting can be added here based on the name string.
-  // For now, assume names like "Beetle", "Ghia", "Off-Road", "Type 3", "Type 4" are stored directly.
   return name;
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>; // Corrected type for params
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const vwTypeSlug = (await params).slug; // Corrected access to slug
+  const vwTypeSlug = (await params).slug;
   const vwTypeData = await getVWTypeBySlug(vwTypeSlug);
 
   if (!vwTypeData) {
@@ -83,10 +71,10 @@ export default async function VWTypePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>; // Corrected type for params
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Corrected type for searchParams
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const vwTypeSlug = (await params).slug; // Corrected access to slug
+  const vwTypeSlug = (await params).slug;
 
   // If the slug is "all", immediately show a 404 page as we don't want a dedicated "all" page.
   if (vwTypeSlug === "all") {
@@ -114,10 +102,7 @@ export default async function VWTypePage({
   return (
     <>
       <h1 className="text-3xl font-bold mb-6 sm:mb-8">{typeName} Videos</h1>
-      <VideoGrid
-        currentPage={validCurrentPage}
-        vwTypeSlug={vwTypeData.slug} // Pass slug to VideoGrid (VideoGrid will need update)
-      />
+      <VideoGrid currentPage={validCurrentPage} vwTypeSlug={vwTypeData.slug} />
     </>
   );
 }

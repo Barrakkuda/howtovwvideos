@@ -19,8 +19,6 @@ export default function HomePageSearch() {
       const trimmedQuery = searchQuery.trim();
 
       if (!trimmedQuery) {
-        // Optionally, you could show a toast or do nothing if the query is empty
-        // For now, we'll just prevent submission of an empty query silently.
         return;
       }
 
@@ -31,7 +29,6 @@ export default function HomePageSearch() {
         return;
       }
 
-      // Set the flag in sessionStorage before navigating (consistent with SearchBar.tsx)
       sessionStorage.setItem("search_submission_term", trimmedQuery);
 
       const searchPageParams = new URLSearchParams();

@@ -13,18 +13,13 @@ export const formatVideoStatus = (status: VideoStatus): string => {
     case VideoStatus.UNAVAILABLE:
       return "Unavailable";
     default:
-      // Optional: Handle unexpected status, though Prisma types should prevent this.
-      // const _exhaustiveCheck: never = status;
-      // console.warn(`Unknown VideoStatus encountered: ${_exhaustiveCheck}`);
-      return String(status); // Fallback to the raw enum key
+      return String(status);
   }
 };
 
 export function formatDate(date: Date | string | number): string {
   try {
     const d = new Date(date);
-    // Example format: Jan 1, 2023, 5:30 PM
-    // You can customize this using toLocaleDateString, toLocaleTimeString, or a library like date-fns
     return d.toLocaleString(undefined, {
       year: "numeric",
       month: "short",

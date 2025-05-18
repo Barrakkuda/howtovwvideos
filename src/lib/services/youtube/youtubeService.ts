@@ -1,7 +1,7 @@
 import { YoutubeTranscript } from "youtube-transcript";
 import { VideoPlatform } from "@generated/prisma";
 
-// New interface for detailed channel information
+// Interface for detailed channel information
 export interface YouTubeChannelDetails {
   platformId: string; // YouTube Channel ID
   name: string;
@@ -10,10 +10,10 @@ export interface YouTubeChannelDetails {
   description?: string;
   customUrl?: string;
   country?: string;
-  publishedAt?: string; // Channel's publishedAt
+  publishedAt?: string;
   subscriberCount?: number;
   videoCount?: number;
-  viewCount?: number; // Total views for the channel's videos
+  viewCount?: number;
   platform: VideoPlatform;
 }
 
@@ -22,8 +22,8 @@ export interface YouTubeVideoItem {
   title: string;
   description: string;
   thumbnailUrl: string;
-  channel?: YouTubeChannelDetails; // Nested channel details
-  publishedAt: string; // Video's publishedAt
+  channel?: YouTubeChannelDetails;
+  publishedAt: string;
   viewCount?: number;
   likeCount?: number;
   popularityScore?: number;
@@ -59,14 +59,14 @@ interface YouTubeVideoApiItemSnippet {
     maxres?: { url: string };
   };
   channelTitle: string;
-  publishedAt: string; // Video published at
+  publishedAt: string;
   channelId: string;
 }
 
 interface YouTubeVideoApiItemStatistics {
   viewCount: string;
   likeCount: string;
-  commentCount: string; // Though we don't use it now
+  commentCount: string; // Not used
 }
 
 interface YouTubeVideoApiItem {
@@ -82,7 +82,7 @@ interface YouTubeChannelApiItem {
     title: string;
     description?: string;
     customUrl?: string;
-    publishedAt?: string; // Channel published at
+    publishedAt?: string;
     thumbnails: {
       default?: { url: string };
       medium?: { url: string };
@@ -91,7 +91,7 @@ interface YouTubeChannelApiItem {
     country?: string;
   };
   statistics: {
-    viewCount: string; // Channel total views
+    viewCount: string;
     subscriberCount: string;
     hiddenSubscriberCount: boolean;
     videoCount: string;
@@ -111,7 +111,7 @@ interface YouTubeSearchApiResultItem {
     kind: string;
     videoId: string;
   };
-  snippet: YouTubeVideoApiItemSnippet; // Assuming YouTubeVideoApiItemSnippet is defined above
+  snippet: YouTubeVideoApiItemSnippet;
 }
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_DATA_API_KEY;
@@ -131,7 +131,7 @@ function decodeHtmlEntities(text: string): string {
 export function calculatePopularityScore(
   viewCountInput: number | undefined | null,
   likeCountInput: number | undefined | null,
-  publishedAt: string | Date | undefined | null, // Video's publishedAt
+  publishedAt: string | Date | undefined | null,
 ): number | null {
   if (!publishedAt) {
     console.log(
@@ -176,7 +176,7 @@ export function calculatePopularityScore(
   return parseFloat(score.toFixed(4));
 }
 
-async function getYouTubeChannelDetailsByApi( // Renamed to avoid conflict if you had another
+async function getYouTubeChannelDetailsByApi(
   channelPlatformId: string,
 ): Promise<YouTubeChannelDetails | null> {
   if (!YOUTUBE_API_KEY) {
@@ -191,7 +191,7 @@ async function getYouTubeChannelDetailsByApi( // Renamed to avoid conflict if yo
   const params = new URLSearchParams({
     key: YOUTUBE_API_KEY,
     id: channelPlatformId,
-    part: "snippet,statistics,brandingSettings", // brandingSettings for more image options if needed
+    part: "snippet,statistics,brandingSettings",
   });
   const fetchUrl = `${YOUTUBE_API_BASE_URL}/channels?${params.toString()}`;
 
@@ -233,7 +233,7 @@ async function getYouTubeChannelDetailsByApi( // Renamed to avoid conflict if yo
         ? decodeHtmlEntities(snippet.customUrl)
         : undefined,
       country: snippet.country,
-      publishedAt: snippet.publishedAt, // Channel's published date
+      publishedAt: snippet.publishedAt,
       subscriberCount: stats.hiddenSubscriberCount
         ? undefined
         : parseInt(stats.subscriberCount) || 0,
@@ -306,7 +306,7 @@ export async function getYouTubeVideoInfo(
     const popularityScoreValue = calculatePopularityScore(
       viewCount,
       likeCount,
-      snippet.publishedAt, // Video's publishedAt for score calculation
+      snippet.publishedAt,
     );
 
     const videoInfo: YouTubeVideoItem = {
@@ -314,7 +314,7 @@ export async function getYouTubeVideoInfo(
       title: decodeHtmlEntities(snippet.title),
       description: decodeHtmlEntities(snippet.description),
       thumbnailUrl: selectedThumbnailUrl,
-      publishedAt: snippet.publishedAt, // Video's publishedAt
+      publishedAt: snippet.publishedAt,
       viewCount: viewCount,
       likeCount: likeCount,
       channel: channelData ?? undefined,
@@ -360,7 +360,7 @@ export async function searchYouTubeVideos(
       const errorMessage =
         data.error?.message || "Unknown API error during search.";
       const isQuotaError = data.error?.errors?.some(
-        (e: YouTubeApiError) => e.reason === "quotaExceeded", // Ensure YouTubeApiError is defined
+        (e: YouTubeApiError) => e.reason === "quotaExceeded",
       );
       return {
         success: false,
@@ -389,7 +389,7 @@ export async function searchYouTubeVideos(
     );
 
     const videosWithDetails = (await Promise.all(videoPromises)).filter(
-      (video): video is YouTubeVideoItem => video !== null, // Ensure YouTubeVideoItem is defined
+      (video): video is YouTubeVideoItem => video !== null,
     );
     return { success: true, data: videosWithDetails };
   } catch (error) {

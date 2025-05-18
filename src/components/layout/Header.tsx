@@ -3,9 +3,6 @@ import SearchBar from "@/components/forms/SearchBar";
 import VWTypeNavigation from "@/components/layout/VWTypeNavigation";
 import { Suspense } from "react";
 
-// Corresponds to VWType enum in Prisma, excluding 'ALL'
-// We might fetch this dynamically or sync it, but for now, manual for nav links.
-
 export default async function Header() {
   return (
     <header className="bg-neutral-800 text-neutral-100 p-4 shadow-md sticky top-0 z-50">

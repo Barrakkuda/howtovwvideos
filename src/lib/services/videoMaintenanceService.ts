@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { VideoPlatform, VideoStatus } from "@generated/prisma";
-import { getVideoPublicationStatuses } from "./youtube/youtubeService"; // Assuming youtubeService is in the same directory for simplicity, adjust if needed
+import { getVideoPublicationStatuses } from "./youtube/youtubeService";
 
 export interface VideoCheckResultItem {
   dbVideoId: number;
@@ -12,7 +12,7 @@ export interface VideoCheckResultItem {
   newStatus?: VideoStatus;
   isValid: boolean;
   reason?: string;
-  error?: string; // For errors during processing this specific video
+  error?: string;
 }
 
 export interface OverallCheckSummary {
@@ -20,10 +20,10 @@ export interface OverallCheckSummary {
   totalFoundInvalid: number;
   totalApiErrors: number;
   details: VideoCheckResultItem[];
-  serviceError?: string; // For errors in the service itself, not individual videos
+  serviceError?: string;
 }
 
-const YOUTUBE_ID_BATCH_SIZE = 50; // Max 50 IDs per YouTube API call
+const YOUTUBE_ID_BATCH_SIZE = 50;
 
 export async function checkPublishedVideoStatuses(): Promise<OverallCheckSummary> {
   const summary: OverallCheckSummary = {

@@ -21,7 +21,7 @@ async function getCategoryBySlug(
 
 // Helper function to format Category names (if needed, like VWType)
 function formatCategoryName(name: string): string {
-  return name; // Assuming names are stored ready for display
+  return name;
 }
 
 export async function generateMetadata({
@@ -56,7 +56,7 @@ export async function generateStaticParams() {
       where: { slug: { not: null } }, // Only include categories that have a slug
     });
     return categories.map((cat: { slug: string | null }) => ({
-      slug: cat.slug as string, // slug is guaranteed by where clause
+      slug: cat.slug as string,
     }));
   } catch (error) {
     console.error(
@@ -80,11 +80,6 @@ export default async function CategoryPage({
   if (categorySlug === "uncategorized") {
     notFound();
   }
-
-  // Here, decide if you want a special "all" category page and how to handle it.
-  // For now, we assume all slugs correspond to actual categories.
-  // If you had a category with slug "all" you wanted to exclude, you'd add:
-  // if (categorySlug === "all") { notFound(); }
 
   const categoryData = await getCategoryBySlug(categorySlug);
 

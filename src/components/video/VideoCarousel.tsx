@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/carousel";
 import VideoCard, { type VideoCardProps } from "@/components/video/VideoCard";
 
-// Define the shape of the video data expected by this component,
-// which should be compatible with VideoCardProps.video
 export type VideoCarouselItemData = VideoCardProps["video"];
 
 interface VideoCarouselProps {
@@ -36,19 +34,16 @@ export function VideoCarousel({
   }
 
   const getBasisClass = (count: number | undefined) => {
-    if (!count || count <= 0) return "basis-full"; // Fallback to full width if invalid count
+    if (!count || count <= 0) return "basis-full";
     if (count === 1) return "basis-full";
     if (count === 2) return "basis-1/2";
     if (count === 3) return "basis-1/3";
     if (count === 4) return "basis-1/4";
     if (count === 5) return "basis-1/5";
     if (count === 6) return "basis-1/6";
-    // Add more if needed, or make it dynamic
-    return `basis-1/${count}`; // General case, though shadcn/ui usually uses fixed fractions
+    return `basis-1/${count}`;
   };
 
-  // Construct responsive basis classes
-  // Example: "basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4"
   const itemClasses = [
     itemsPerPageMap.base ? getBasisClass(itemsPerPageMap.base) : "",
     itemsPerPageMap.sm ? `sm:${getBasisClass(itemsPerPageMap.sm)}` : "",
@@ -67,7 +62,7 @@ export function VideoCarousel({
       <Carousel
         opts={{
           align: "start",
-          loop: videos.length > (itemsPerPageMap.lg || 4), // Loop if more videos than items per page on large screens
+          loop: videos.length > (itemsPerPageMap.lg || 4),
         }}
         className="w-full"
       >

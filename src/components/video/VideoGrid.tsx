@@ -12,21 +12,16 @@ interface VideoGridProps {
   categorySlug?: string;
   tagSlug?: string;
   searchQuery?: string;
-  // Add other filter props here later, e.g.:
-  // searchQuery?: string;
-  // tags?: string[];
 }
 
 // Helper to ensure video data matches what VideoCard expects
-// This should align with VideoCardProps.video and the data fetched from Prisma
-// We'll refine this as we connect actual data.
 interface VideoForCardDisplay {
   id: number;
   slug: string;
   title: string;
   thumbnailUrl?: string | null;
-  url?: string | null; // For linking, can be derived if using local video pages
-  categories?: CategoryInfo[]; // Added categories
+  url?: string | null;
+  categories?: CategoryInfo[];
 }
 
 async function fetchPublishedVideos({
@@ -103,9 +98,7 @@ async function fetchPublishedVideos({
       slug: true,
       title: true,
       thumbnailUrl: true,
-      // videoId: true, // This was selected before, but not used in VideoForCardDisplay directly
       categories: {
-        // Include categories
         select: {
           category: {
             select: {
@@ -219,13 +212,8 @@ export default async function VideoGrid({
   }
 
   // If we get here, the page number is valid, so fetch the videos
-  const {
-    videos,
-    // currentPage: actualCurrentPage, // already handled
-    hasNextPage,
-    hasPrevPage,
-  } = await fetchPublishedVideos({
-    page: actualCurrentPage, // Use validated page number
+  const { videos, hasNextPage, hasPrevPage } = await fetchPublishedVideos({
+    page: actualCurrentPage,
     limit: itemsPerPage,
     vwTypeSlug,
     categorySlug,

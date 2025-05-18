@@ -82,7 +82,7 @@ interface PersistentTableState {
 // parseUrlState Function
 function parseUrlState(
   searchParams: ReadonlyURLSearchParams,
-  defaultPageSize: number = 50, // Allow passing default page size
+  defaultPageSize: number = 50,
 ): PersistentTableState {
   const sortField = searchParams.get("sort_field");
   const sortDir = searchParams.get("sort_dir");
@@ -163,14 +163,11 @@ export default function AdminVideosPageClient() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  // Memoize the function to get the initial state based on priority (URL > Defaults)
   const getInitialState = useCallback((): PersistentTableState => {
     const stateFromUrl = parseUrlState(searchParams, defaultPageSizeForTable);
 
     const defaultSorting: SortingState = [];
     const defaultColumnVisibility: VisibilityState = {};
-    // initialColumnFilters is used directly for columnFilters default
-    // defaultPagination is { pageIndex: 0, pageSize: defaultPageSizeForTable }
 
     const resolvedSorting: SortingState =
       stateFromUrl?.sorting ?? defaultSorting;
@@ -247,14 +244,10 @@ export default function AdminVideosPageClient() {
     }, 500),
   ).current;
 
-  // Effect for initial mount and hydration
   useEffect(() => {
-    setIsMounted(true); // Set mounted on first run
+    setIsMounted(true);
 
-    // Hydration logic: runs only once after mount if not already hydrated
     if (!didHydrate.current) {
-      // Call getInitialState directly here.
-      // Its own useCallback dependencies (searchParams, etc.) will be from the initial render.
       const clientSideInitialState = getInitialState();
 
       setSorting(clientSideInitialState.sorting ?? []);
@@ -272,10 +265,8 @@ export default function AdminVideosPageClient() {
       didHydrate.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array means this effect runs only once after the initial render.
-  // getInitialState will be called with the searchParams from that initial render.
+  }, []);
 
-  // Effect for synchronizing state to URL (this one correctly depends on state changes)
   useEffect(() => {
     if (isMounted && didHydrate.current) {
       // Ensure hydration is complete before syncing
@@ -325,7 +316,6 @@ export default function AdminVideosPageClient() {
       if (categoriesResult.success && categoriesResult.data) {
         setAllCategories(categoriesResult.data);
       } else {
-        // Non-critical, but log it or show a minor toast
         console.warn(
           categoriesResult.error || "Failed to fetch categories for filters.",
         );
@@ -435,7 +425,6 @@ export default function AdminVideosPageClient() {
       results.forEach((result) => {
         if (result.success) {
           successCount++;
-          // Optional: toast per video, or just a summary
         } else {
           failureCount++;
           toast.error(
@@ -534,7 +523,6 @@ export default function AdminVideosPageClient() {
   }, [allCategories, allVwTypes]);
 
   if (isLoading) {
-    // Use the same loader component for consistency during data fetching
     return <AdminVideosPageClientLoader />;
   }
 

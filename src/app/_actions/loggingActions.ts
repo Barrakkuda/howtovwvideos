@@ -88,8 +88,8 @@ export interface FetchSearchLogsResponse {
 export async function fetchSearchLogs({
   page = 1,
   pageSize = 20,
-  sortBy = "createdAt", // Default sort field
-  sortDirection = "desc", // Default sort direction
+  sortBy = "createdAt",
+  sortDirection = "desc",
 }: {
   page?: number;
   pageSize?: number;
@@ -122,7 +122,7 @@ export async function fetchSearchLogs({
       data: logs.map((log) => ({
         ...log,
         partialIpAddress:
-          log.partialIpAddress === null ? "N/A" : log.partialIpAddress, // Handle null for display
+          log.partialIpAddress === null ? "N/A" : log.partialIpAddress,
       })),
       totalPages: Math.ceil(totalCount / pageSize),
       totalCount,

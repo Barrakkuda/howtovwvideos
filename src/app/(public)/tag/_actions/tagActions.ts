@@ -11,8 +11,8 @@ export interface ActionResponse<T> {
   data?: T;
   message?: string;
   errors?: Record<string, string[] | undefined>;
-  error?: string; // General error message
-  count?: number; // For bulk actions
+  error?: string;
+  count?: number;
 }
 
 export interface TagForTable {
@@ -57,15 +57,15 @@ export async function getTagBySlug(slug: string): Promise<
           select: {
             video: {
               select: {
-                videoId: true, // youtube video id
+                videoId: true,
                 title: true,
-                slug: true, // video page slug
+                slug: true,
               },
             },
           },
           orderBy: {
             video: {
-              createdAt: "desc", // Or other relevant ordering for videos
+              createdAt: "desc",
             },
           },
         },
@@ -170,7 +170,7 @@ export async function addTag(
       },
     });
     revalidatePath("/admin/tags");
-    revalidatePath("/tag"); // Revalidate public tag listing/pages if any
+    revalidatePath("/tag");
     return {
       success: true,
       message: "Tag added successfully!",
@@ -208,10 +208,6 @@ export async function updateTag(
   }
 
   const { name, slug, description } = validationResult.data;
-  // If slug is being updated, ensure it's valid or generate if empty and name changes.
-  // However, typically slugs are not regenerated on every update unless explicitly requested.
-  // The form should handle slug generation/suggestion logic.
-  // For now, we trust the incoming slug or use existing if it's not part of formData.
   const tagToUpdate = await prisma.tag.findUnique({ where: { id } });
   if (!tagToUpdate) {
     return { success: false, message: "Tag not found." };
@@ -232,9 +228,9 @@ export async function updateTag(
       },
     });
     revalidatePath("/admin/tags");
-    revalidatePath(`/admin/tags/edit/${id}`); // Assuming an edit page exists
+    revalidatePath(`/admin/tags/edit/${id}`);
     revalidatePath(`/tag/${updatedTag.slug}`);
-    revalidatePath(`/tag/${tagToUpdate.slug}`); // Revalidate old slug path if it changed
+    revalidatePath(`/tag/${tagToUpdate.slug}`);
 
     return {
       success: true,
@@ -274,7 +270,6 @@ export async function deleteTag(id: number): Promise<ActionResponse<never>> {
     return { success: true, message: "Tag deleted successfully!" };
   } catch (error) {
     console.error(`Failed to delete tag with id ${id}:`, error);
-    // Add more specific error handling if needed (e.g., related records preventing deletion)
     return { success: false, message: "Failed to delete tag." };
   }
 }
@@ -290,7 +285,7 @@ export async function bulkDeleteTags(
       where: { id: { in: ids } },
     });
     revalidatePath("/admin/tags");
-    revalidatePath("/tag"); // Broad revalidation
+    revalidatePath("/tag");
     return {
       success: true,
       message: `${result.count} tag(s) deleted successfully.`,
@@ -333,8 +328,6 @@ export async function bulkGenerateSlugsForTags(
 
     const newSlug = slugify(tag.name);
     if (newSlug === tag.slug) {
-      // errors.push(`Tag ID ${id} (${tag.name}) already has the correct slug: ${newSlug}. Skipping.`);
-      // Optionally, count as updated or skip silently. For now, let's assume we only update if different.
       continue;
     }
 
@@ -344,8 +337,8 @@ export async function bulkGenerateSlugsForTags(
         data: { slug: newSlug },
       });
       updatedCount++;
-      revalidatePath(`/tag/${tag.slug}`); // old slug
-      revalidatePath(`/tag/${newSlug}`); // new slug
+      revalidatePath(`/tag/${tag.slug}`);
+      revalidatePath(`/tag/${newSlug}`);
     } catch (error) {
       console.error(`Failed to update slug for tag ID ${id}:`, error);
       if (
@@ -365,7 +358,7 @@ export async function bulkGenerateSlugsForTags(
 
   if (updatedCount > 0) {
     revalidatePath("/admin/tags");
-    revalidatePath("/tag"); // Broad revalidation for public tag pages
+    revalidatePath("/tag");
   }
 
   if (errors.length > 0) {
@@ -443,8 +436,8 @@ export async function fetchNavigationTags(
       error instanceof Error ? error.message : "An unknown error occurred";
     return {
       success: false,
-      error: errorMessage, // Use general 'error' field for Promise<ActionResponse<T>>
-      message: errorMessage, // Keep message for backward compatibility if used
+      error: errorMessage,
+      message: errorMessage,
     };
   }
 }

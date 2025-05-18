@@ -19,10 +19,8 @@ export async function fetchNavigationVWTypes(): Promise<{
         id: true,
         name: true,
         slug: true,
-        // description: true, // If needed for tooltips or other UI
       },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      // where: { videos: { some: { video: { status: "PUBLISHED" } } } } // Optional: Only show types with published videos
     });
     return { success: true, data: vwTypes };
   } catch (error) {

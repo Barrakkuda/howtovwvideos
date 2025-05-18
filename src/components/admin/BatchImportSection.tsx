@@ -26,10 +26,9 @@ export default function BatchImportSection() {
     }
 
     setIsProcessing(true);
-    setBatchResults([]); // Clear previous results
+    setBatchResults([]);
 
     try {
-      // Dynamically import the action
       const { batchImportYouTubeVideosAction } = await import(
         "@/app/admin/import-videos/_actions/importActions"
       );
@@ -115,7 +114,6 @@ export default function BatchImportSection() {
           <p className="mt-2 text-muted-foreground">
             Batch import in progress... This may take a while.
           </p>
-          {/* More detailed progress can be added here if the action streams it */}
         </div>
       )}
 

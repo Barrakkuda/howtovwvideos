@@ -17,7 +17,7 @@ export interface VWTypeForTable {
   slug: string | null;
   description: string | null;
   sortOrder: number;
-  videoCount: number; // Using a more descriptive name
+  videoCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,9 +32,9 @@ export interface ActionResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
-  error?: string | null; // General error message
-  errors?: Record<string, string[]> | null; // Field-specific Zod errors
-  count?: number; // For bulk actions
+  error?: string | null;
+  errors?: Record<string, string[]> | null;
+  count?: number;
 }
 
 // Fetch all VWTypes for the admin table
@@ -139,9 +139,9 @@ export async function addVWType(
       },
     });
     revalidatePath("/admin/vwtypes");
-    revalidatePath("/admin/videos"); // For facet filters if they use vwtypes
-    revalidatePath("/"); // For public navigation
-    revalidatePath("/type"); // For public VW Type listing/pages
+    revalidatePath("/admin/videos");
+    revalidatePath("/");
+    revalidatePath("/type");
     revalidatePath(`/type/${newVWType.slug}`);
     return {
       success: true,
@@ -181,7 +181,7 @@ export async function addVWType(
 // Update an existing VWType
 export async function updateVWType(
   id: number,
-  formData: Partial<VWTypeFormData>, // Allow partial updates
+  formData: Partial<VWTypeFormData>,
 ): Promise<ActionResponse<VWTypeForTable>> {
   if (isNaN(id) || id <= 0) {
     return { success: false, message: "Invalid VWType ID for update." };
@@ -312,8 +312,7 @@ export async function deleteVWType(id: number): Promise<ActionResponse> {
     return { success: true, message: "VWType deleted successfully." };
   } catch (error) {
     console.error(`Error deleting VWType with ID ${id}:`, error);
-    // P2003 is foreign key constraint, but cascade should prevent this from VWTypesOnVideos.
-    // It might occur if other direct relations exist without cascade (not in current schema).
+
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2003"
@@ -393,8 +392,6 @@ export async function bulkGenerateSlugsForVWTypes(
     const oldSlug = vwType.slug; // Capture old slug
 
     if (newSlug === oldSlug) {
-      // Potentially skip if slug hasn't changed, or log it
-      // errors.push(`VWType ID ${id} (${vwType.name}) already has the correct slug: ${newSlug}. Skipping.`);
       continue;
     }
 
@@ -429,14 +426,14 @@ export async function bulkGenerateSlugsForVWTypes(
     revalidatePath("/admin/vwtypes");
     revalidatePath("/admin/videos");
     revalidatePath("/");
-    revalidatePath("/type"); // Broad revalidation for public type pages
+    revalidatePath("/type");
   }
 
   // Return results
   const message = `Successfully generated/updated slugs for ${updatedCount} VWType(s).`;
   if (errors.length > 0) {
     return {
-      success: updatedCount > 0, // Overall success if at least one updated
+      success: updatedCount > 0,
       message: `${message} ${errors.length} error(s) occurred: ${errors.join("; ")}`,
       error: errors.join("; "),
       count: updatedCount,
@@ -453,7 +450,7 @@ export async function fetchNavigationVWTypes(): Promise<
     const vwTypes = await prisma.vWType.findMany({
       where: {
         NOT: {
-          slug: "all", // Exclude the VWType with slug 'all'
+          slug: "all",
         },
       },
       select: { id: true, name: true, slug: true },

@@ -3,8 +3,6 @@
 // To run with path aliases (e.g., @/lib/db), you might need tsx or ts-node with tsconfig-paths:
 // Example: npx tsx --tsconfig tsconfig.json scripts/checkVideoStatus.ts
 
-// PrismaClient import removed as the service uses the shared instance from @/lib/db
-
 import { checkPublishedVideoStatuses } from "../src/lib/services/videoMaintenanceService"; // Adjust path as needed
 
 async function main() {
@@ -14,8 +12,6 @@ async function main() {
   );
 
   try {
-    // The checkPublishedVideoStatuses function uses the prisma client from @/lib/db,
-    // so direct prisma instantiation might not be needed here if run in an env that resolves aliases.
     const summary = await checkPublishedVideoStatuses();
 
     const endTime = new Date();
@@ -54,8 +50,6 @@ async function main() {
     );
     process.exitCode = 1; // Indicate failure
   } finally {
-    // If you had instantiated Prisma locally in this script:
-    // await prisma.$disconnect();
     console.log(`[${new Date().toISOString()}] Script finished.`);
   }
 }

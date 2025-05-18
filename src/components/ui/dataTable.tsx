@@ -73,7 +73,7 @@ export interface BulkAction<TData> {
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   action: (selectedRows: Row<TData>[]) => void | Promise<void>;
-  isDestructive?: boolean; // Optional: for styling destructive actions like delete
+  isDestructive?: boolean;
 }
 
 interface DataTableProps<TData, TValue> {
@@ -271,7 +271,7 @@ export function DataTable<TData, TValue>({
                   key={index}
                   onClick={async () => {
                     await item.action(table.getFilteredSelectedRowModel().rows);
-                    table.resetRowSelection(true); // Clear selection after action
+                    table.resetRowSelection(true);
                   }}
                   className={
                     item.isDestructive
@@ -385,8 +385,7 @@ export function DataTable<TData, TValue>({
               size="sm"
               className="ml-auto hidden h-8 lg:flex"
             >
-              <SlidersHorizontalIcon className="mr-2 h-4 w-4" />{" "}
-              {/* Consider other icons */}
+              <SlidersHorizontalIcon className="mr-2 h-4 w-4" />
               Columns
             </Button>
           </DropdownMenuTrigger>
@@ -410,8 +409,7 @@ export function DataTable<TData, TValue>({
                       column.toggleVisibility(!!value)
                     }
                   >
-                    <span className="truncate">{column.id}</span>{" "}
-                    {/* Better label than index */}
+                    <span className="truncate">{column.id}</span>
                   </DropdownMenuCheckboxItem>
                 );
               })}

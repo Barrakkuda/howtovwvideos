@@ -8,7 +8,7 @@ export default async function CategoryGrid() {
   const categories: CategoryBasicInfo[] = await getAllCategories();
 
   if (!categories || categories.length === 0) {
-    return null; // Or some placeholder if no categories are found (except Uncategorized)
+    return null;
   }
 
   return (

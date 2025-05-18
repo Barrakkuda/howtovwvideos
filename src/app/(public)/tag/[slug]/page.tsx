@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTagBySlug } from "@/app/(public)/tag/_actions/tagActions";
 import VideoGrid from "@/components/video/VideoGrid";
-// import PageHeader from "@/components/layout/PageHeader"; // Assuming you have a generic PageHeader
 
 interface TagPageProps {
   params: Promise<{ slug: string }>;
@@ -27,7 +26,6 @@ export async function generateMetadata({
     openGraph: {
       title: `${tag.name} Videos | ${process.env.NEXT_PUBLIC_SITE_NAME}`,
       description: tag.description || `Watch videos tagged with ${tag.name}.`,
-      // Add an image URL if available, e.g., from the first video or a default tag image
     },
   };
 }

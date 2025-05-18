@@ -9,7 +9,6 @@ interface PaginationControlsProps {
   totalPages: number;
   hasNextPage: boolean;
   hasPrevPage: boolean;
-  // basePath will be used to construct page links, e.g., "/videos" or "/search"
   basePath?: string;
 }
 

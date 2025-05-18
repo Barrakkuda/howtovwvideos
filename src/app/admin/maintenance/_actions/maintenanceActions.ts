@@ -23,12 +23,9 @@ export async function triggerVideoStatusCheck(): Promise<TriggerVideoStatusCheck
     );
 
     if (summary.totalFoundInvalid > 0 || summary.totalApiErrors > 0) {
-      // Revalidate paths if changes likely occurred
       revalidatePath("/admin/videos");
       revalidatePath("/admin/dashboard");
-      // Add any other relevant public paths that list videos by status
       revalidatePath("/");
-      // Potentially revalidate specific category or type pages if statuses changed significantly
     }
 
     return {

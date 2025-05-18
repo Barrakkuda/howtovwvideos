@@ -84,11 +84,11 @@ export default function YouTubeImportForm({
     }
     setIsLoading(true);
     setError(null);
-    setResults([]); // Clear previous results
-    setImportStatus({}); // Clear import statuses
-    setSelectedCategories({}); // Clear selected categories
-    setDisplayedTranscripts({}); // Clear displayed transcripts
-    setOpenaiAnalysis({}); // Clear OpenAI analysis results
+    setResults([]);
+    setImportStatus({});
+    setSelectedCategories({});
+    setDisplayedTranscripts({});
+    setOpenaiAnalysis({});
 
     try {
       const searchResults = await searchYouTubeVideos(searchQuery);
@@ -159,7 +159,7 @@ export default function YouTubeImportForm({
       const categoryId = parseInt(selectedCategoryOption, 10);
       if (isNaN(categoryId)) {
         toast.error("Invalid category selected.");
-        return; // Should not happen if UI is correct
+        return;
       }
       importPayload = {
         videoData: video,

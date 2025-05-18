@@ -21,7 +21,6 @@ import {
   BatchImportResult,
 } from "@/lib/services/batch/batchService";
 
-// Re-export types needed by client components that use these actions
 export type {
   YouTubeVideoItem,
   YouTubeSearchResponse,
@@ -34,7 +33,6 @@ export interface ImportVideoResponse {
   videoId?: string;
 }
 
-// Define the payload structure for the import action
 export interface ImportYouTubeVideoPayload {
   videoData: YouTubeVideoItem;
   categoryId?: number; // For single, existing category selection
@@ -44,7 +42,6 @@ export interface ImportYouTubeVideoPayload {
   openAIAnalysisData?: OpenAIAnalysisResponse;
 }
 
-// Action to import a video into the database
 export async function importYouTubeVideo(
   payload: ImportYouTubeVideoPayload,
 ): Promise<ImportVideoResponse> {
@@ -141,7 +138,6 @@ export async function importYouTubeVideo(
       upsertedChannelId = upserted.id;
     } catch (channelError) {
       console.error("Error upserting channel:", channelError);
-      // Non-critical error, proceed without channel data
     }
   }
 
@@ -212,8 +208,6 @@ export async function importYouTubeVideo(
         description: videoData.description || "",
         url: `https://www.youtube.com/watch?v=${videoData.id}`,
         thumbnailUrl: videoData.thumbnailUrl,
-        // channelTitle: videoData.channelTitle, // Removed
-        // channelUrl: videoData.channelUrl, // Removed
         transcript: transcriptText,
       }),
     };
@@ -446,13 +440,13 @@ export async function analyzeTranscriptWithOpenAI(
       select: { name: true }, // Or slug: true, depending on what analyzeTranscriptService expects
       orderBy: { name: "asc" },
     });
-    const availableVWTypeNamesOrSlugs = vwTypesFromDb.map((type) => type.name); // Assuming service expects names
+    const availableVWTypeNamesOrSlugs = vwTypesFromDb.map((type) => type.name);
 
     // Call the actual service function with the new parameters
     return analyzeTranscriptService(
       transcript,
       existingCategoryNames,
-      availableVWTypeNamesOrSlugs, // Pass fetched names/slugs
+      availableVWTypeNamesOrSlugs,
       videoTitle,
     );
   } catch (error) {

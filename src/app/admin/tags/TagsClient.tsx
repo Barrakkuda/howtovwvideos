@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { PlusIcon, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { DataTable, BulkAction } from "@/components/ui/dataTable"; // Ensure DataTable supports bulk actions
+import { DataTable, BulkAction } from "@/components/ui/dataTable";
 import {
   Dialog,
   DialogContent,
@@ -239,7 +239,6 @@ export default function AdminTagsPageClient() {
               `${result.count || ids.length} slug(s) generated/updated.`
             );
           } else {
-            // Handle partial success with errors shown in the message
             toast.error(result.error || "Some slugs could not be generated.");
             return (
               result.message || "Slug generation completed with some errors."
@@ -305,7 +304,7 @@ export default function AdminTagsPageClient() {
         columns={tagColumns as ColumnDef<TagForTable, unknown>[]}
         data={tags}
         filterColumnPlaceholder="Search by name, slug..."
-        facetFilters={[]} // No facet filters for Tags for now, add if needed
+        facetFilters={[]}
         sorting={sorting}
         onSortingChange={setSorting}
         columnFilters={columnFilters}

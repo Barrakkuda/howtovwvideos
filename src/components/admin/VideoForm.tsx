@@ -141,7 +141,7 @@ export default function VideoForm({
       setValue("tags", [...existingTags, currentTag.trim()], {
         shouldValidate: true,
       });
-      setCurrentTag(""); // Clear input
+      setCurrentTag("");
     }
   };
 
@@ -363,8 +363,6 @@ export default function VideoForm({
       if (result.success) {
         toast.success(result.message);
         setCurrentPopularityScore(result.newScore);
-        // Optionally update form value if you want it to be part of the form state for some reason
-        // form.setValue("popularityScore", result.newScore, { shouldValidate: true });
       } else {
         toast.error(result.message);
       }
@@ -756,13 +754,12 @@ export default function VideoForm({
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Popularity Score Section - Using FormField */}
+          {/* Popularity Score Section */}
           {(dbVideoId || initialData?.id) && (
             <FormField
               control={form.control}
-              name="popularityScore" // Connects to schema, though primarily display + action here
+              name="popularityScore"
               render={() => (
-                // { field: _field_popularity }, // field marked as unused - REMOVED
                 <FormItem>
                   <FormLabel>Popularity Score</FormLabel>
                   <FormControl>
@@ -781,7 +778,7 @@ export default function VideoForm({
                       <Button
                         type="button"
                         variant="outline"
-                        size="icon" // Made button smaller
+                        size="icon"
                         onClick={handleRecalculateScore}
                         disabled={isRecalculatingScore}
                         title="Recalculate Score"
@@ -797,13 +794,12 @@ export default function VideoForm({
             />
           )}
 
-          {/* Published At Display Section - Using FormField */}
+          {/* Published At Display Section */}
           {(dbVideoId || initialData?.id) && (
             <FormField
               control={form.control}
-              name="publishedAt" // Connects to schema
+              name="publishedAt"
               render={() => (
-                // { field: _field_publishedAt }, // field marked as unused - REMOVED
                 <FormItem>
                   <FormLabel>Published Date (YouTube)</FormLabel>
                   <FormControl className="flex-grow">

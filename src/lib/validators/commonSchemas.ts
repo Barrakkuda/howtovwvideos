@@ -15,5 +15,4 @@ export const slugSchema = z
     message: "Slug cannot contain consecutive hyphens.",
   });
 
-// Example: Shared ID schema (can be uncommented and used if needed elsewhere)
-// export const idSchema = z.coerce.number().int().positive();
+export const idSchema = z.coerce.number().int().positive();

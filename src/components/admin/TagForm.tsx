@@ -26,11 +26,10 @@ interface TagFormProps {
   onCancel?: () => void;
 }
 
-// Define a clear default structure matching the Zod schema's output for default/empty form
 const defaultFormValues: TagFormData = {
   name: "",
-  slug: undefined, // Corresponds to optional and transform(e => e === "" ? undefined : e)
-  description: undefined, // Corresponds to .default(null)
+  slug: undefined,
+  description: undefined,
 };
 
 export default function TagForm({
@@ -64,12 +63,10 @@ export default function TagForm({
   });
 
   useEffect(() => {
-    // Reset form when initialData changes, ensuring correct merging with defaults
     form.reset(getInitialFormValues());
-  }, [initialData, form, getInitialFormValues]); // form is stable, initialData is the key trigger
+  }, [initialData, form, getInitialFormValues]);
 
   const handleFormSubmit: SubmitHandler<TagFormData> = (data) => {
-    // The data object here should be correctly typed according to TagFormData (after Zod processing)
     onSubmit(data, initialData?.id);
   };
 
@@ -156,7 +153,7 @@ export default function TagForm({
                   placeholder="A brief explanation of what this tag covers."
                   className="resize-y min-h-[80px]"
                   {...field}
-                  value={field.value ?? ""} // Ensure value is not null for textarea
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormDescription>

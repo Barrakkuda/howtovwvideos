@@ -67,8 +67,6 @@ If the video does qualify:
 Video Title: "${videoTitle}"
 Video Transcript: "${transcript}"`;
 
-  // console.log("Sending the following prompt to OpenAI:\n", prompt);
-
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",

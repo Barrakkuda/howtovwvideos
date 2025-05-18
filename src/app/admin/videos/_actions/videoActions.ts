@@ -88,7 +88,6 @@ export async function addVideo(formData: VideoFormData) {
             assignedBy: "user-form",
           })),
         },
-        // NEW WAY for Tags in addVideo
         ...(add_tagIdsToConnect.length > 0 && {
           tags: {
             create: add_tagIdsToConnect.map((tagId) => ({
@@ -146,8 +145,6 @@ export async function deleteVideo(id: number) {
     };
   } catch (error) {
     console.error("Failed to delete video:", error);
-    // Check for specific Prisma error for record not found, if desired
-    // e.g., if (error.code === 'P2025') { ... }
     return {
       success: false,
       message:
@@ -508,7 +505,6 @@ export async function refetchVideoInfo(youtubeVideoId: string) {
         !isNaN(new Date(videoData.publishedAt).getTime())
           ? new Date(videoData.publishedAt)
           : existingVideo.publishedAt, // Video's own publishedAt
-      // channelTitle and channelUrl are removed from Video model
       processedAt: new Date(), // Mark as processed/refetched
     };
 
@@ -528,7 +524,6 @@ export async function refetchVideoInfo(youtubeVideoId: string) {
       success: true,
       message: `Video "${videoData.title}" information refetched and updated successfully.`,
       data: {
-        // Return some of the core updated fields for potential UI updates
         title: videoData.title,
         description: videoUpdateData.description,
         thumbnailUrl: videoUpdateData.thumbnailUrl,
@@ -637,7 +632,6 @@ export async function bulkGenerateSlugsForVideos(
             `Error for video ID ${id}: A video with the generated slug from title "${videoTitleForErrorReporting || "[unknown title]"}" already exists.`,
           );
         } else {
-          // Handle other P2002 errors if necessary, or use a general message
           errors.push(
             `Error for video ID ${id}: A unique constraint violation occurred (not necessarily on slug).`,
           );

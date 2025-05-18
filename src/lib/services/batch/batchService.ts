@@ -240,7 +240,6 @@ export async function batchImportVideos(
                 "Error upserting channel during batch import:",
                 channelError,
               );
-              // Non-critical for batch import, video can still be created
             }
           }
 
@@ -277,7 +276,6 @@ export async function batchImportVideos(
                     data: { name: name.trim() },
                   });
                 } catch (createError: unknown) {
-                  // Check for PrismaClientKnownRequestError properties
                   if (
                     createError &&
                     typeof createError === "object" &&

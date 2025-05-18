@@ -29,7 +29,6 @@ export async function getAllCategories(): Promise<CategoryBasicInfo[]> {
       },
     });
 
-    // Ensure slug is not null, similar to how we handled it in videoFeedActions
     return categories.map((category) => ({
       ...category,
       slug: category.slug!,

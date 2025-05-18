@@ -18,7 +18,6 @@ export const createTagColumns = (
   onEdit: (tag: TagForTable) => void,
   onDelete: (tag: TagForTable) => void,
 ): ColumnDef<TagForTable>[] => [
-  // Selection Column
   {
     id: "select",
     header: ({ table }) => (
@@ -43,8 +42,6 @@ export const createTagColumns = (
     enableSorting: false,
     enableHiding: false,
   },
-
-  // Column for ID
   {
     accessorKey: "id",
     header: ({ column }) => {
@@ -60,8 +57,6 @@ export const createTagColumns = (
     },
     cell: ({ row }) => <div className="w-[80px]">{row.getValue("id")}</div>,
   },
-
-  // Column for Tag Name
   {
     accessorKey: "name",
     header: ({ column }) => {
@@ -77,8 +72,6 @@ export const createTagColumns = (
     },
     cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
   },
-
-  // Column for Tag Slug
   {
     accessorKey: "slug",
     header: ({ column }) => {
@@ -96,8 +89,6 @@ export const createTagColumns = (
       <div className="font-mono text-xs">{row.getValue("slug")}</div>
     ),
   },
-
-  // Column for Description
   {
     accessorKey: "description",
     header: "Description",
@@ -108,8 +99,6 @@ export const createTagColumns = (
     ),
     enableSorting: false,
   },
-
-  // Column for Video Count
   {
     accessorKey: "videoCount",
     header: ({ column }) => {
@@ -128,8 +117,6 @@ export const createTagColumns = (
       <div className="text-center">{row.original.videoCount}</div>
     ),
   },
-
-  // Column for Created At
   {
     accessorKey: "createdAt",
     header: ({ column }) => (
@@ -147,11 +134,9 @@ export const createTagColumns = (
       </div>
     ),
   },
-
-  // Column for Actions (Edit, Delete)
   {
     id: "actions",
-    header: () => <div className="text-right">Actions</div>, // Simple header for actions
+    header: () => <div className="text-right">Actions</div>,
     cell: ({ row }) => {
       const tag = row.original;
       return (

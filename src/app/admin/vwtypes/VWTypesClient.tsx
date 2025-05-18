@@ -293,8 +293,6 @@ export default function AdminVWTypesPageClient() {
     setColumnVisibility({});
     setGlobalFilter("");
     setRowSelection({});
-    // Note: URL persistence is not implemented here as it was in AdminVideosPage for brevity
-    // If needed, similar logic from AdminVideosPage could be adapted.
   }, []);
 
   if (isLoading && vwTypes.length === 0) {
@@ -361,7 +359,7 @@ export default function AdminVWTypesPageClient() {
             }
             onSubmit={handleFormSubmit}
             isSubmitting={isSubmittingForm}
-            onCancel={handleCloseModal} // Pass the cancel handler
+            onCancel={handleCloseModal}
           />
         </DialogContent>
       </Dialog>

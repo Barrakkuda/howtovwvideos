@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "next/navigation"; // Or next/navigation based on your app dir structure
+import { useRouter } from "next/navigation";
 
 interface VWTypeFormProps {
   initialData?: Partial<VWTypeFormData> & { id?: number };
   onSubmit: (data: VWTypeFormData, id?: number) => Promise<void>;
   isSubmitting: boolean;
-  onCancel?: () => void; // Optional: For modal close or router.back()
+  onCancel?: () => void;
 }
 
 export default function VWTypeForm({
@@ -53,8 +53,6 @@ export default function VWTypeForm({
 
     if (currentName && (!currentSlug || currentSlug.trim() === "")) {
       let newSlug = slugify(currentName, { lower: true, strict: true });
-      // If slugify produces a short slug (1 or 2 chars), treat as empty to pass validation
-      // Zod schema allows empty string for optional slug.
       if (newSlug.length > 0 && newSlug.length < 3) {
         newSlug = "";
       }

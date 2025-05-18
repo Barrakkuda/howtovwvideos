@@ -70,7 +70,6 @@ export default function SearchBar() {
       const searchPageParams = new URLSearchParams();
       searchPageParams.set("q", trimmedQuery);
 
-      // Set the flag in sessionStorage before navigating
       sessionStorage.setItem("search_submission_term", trimmedQuery);
 
       router.push(`/search?${searchPageParams.toString()}`);

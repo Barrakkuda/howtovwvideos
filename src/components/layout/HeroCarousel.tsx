@@ -11,14 +11,14 @@ import Fade from "embla-carousel-fade";
 import Image from "next/image";
 import HomePageSearch from "@/components/search/HomePageSearch";
 
-// Placeholder images - replace with your actual images
+// Placeholder images
 const carouselImages = [
   {
     src: "https://images.unsplash.com/photo-1610336102810-6a06af8532d6",
     alt: "Classic VW Beetle",
   },
   {
-    src: "https://images.unsplash.com/photo-1711386689622-1cda23e10217", // This was the first one we fixed
+    src: "https://images.unsplash.com/photo-1711386689622-1cda23e10217",
     alt: "VW Bus Side View",
   },
   {

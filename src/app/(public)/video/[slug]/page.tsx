@@ -19,7 +19,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const videoData: PublicVideoDetails | null = await getVideoBySlug(slug);
 
   if (!videoData || videoData.status !== VideoStatus.PUBLISHED) {
-    // Optionally, return metadata for a 'not found' or 'private' page
     return {
       title: "Video Not Found",
       description: "This video is not available or could not be found.",
@@ -33,10 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: videoData.title + " | " + process.env.NEXT_PUBLIC_SITE_NAME,
       description: videoData.description || "",
       type: "video.other",
-      url: `https://${process.env.NEXT_PUBLIC_SITE_URL}/video/${videoData.slug}`, // Replace with your actual domain
+      url: `https://${process.env.NEXT_PUBLIC_SITE_URL}/video/${videoData.slug}`,
       images: videoData.thumbnailUrl ? [{ url: videoData.thumbnailUrl }] : [],
-      // You might also want to add video-specific OpenGraph tags if your video player supports them
-      // e.g., video:secure_url, video:type, video:width, video:height
     },
   };
 }
@@ -64,7 +61,7 @@ export default async function PublicVideoPage({ params }: Props) {
           <iframe
             width="100%"
             height="100%"
-            src={`https://www.youtube.com/embed/${videoData.videoId}`} // Note: using videoData.videoId which is the YT ID
+            src={`https://www.youtube.com/embed/${videoData.videoId}`}
             title={videoData.title}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -72,7 +69,7 @@ export default async function PublicVideoPage({ params }: Props) {
             className="w-full h-full"
           ></iframe>
         )}
-        {/* Add Vimeo player logic if needed */}
+
         {!videoData.videoId && (
           <p>Video player will be here. (Video ID missing for embed)</p>
         )}
@@ -190,8 +187,6 @@ export default async function PublicVideoPage({ params }: Props) {
           </div>
         </aside>
       </div>
-
-      {/* TODO: Related Videos, Comments */}
     </>
   );
 }

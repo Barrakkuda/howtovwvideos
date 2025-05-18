@@ -1,4 +1,4 @@
-"use client"; // If it includes client-side interactions like Link or event handlers in future
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -17,7 +17,7 @@ export interface VideoCardProps {
     title: string;
     thumbnailUrl?: string | null;
     url?: string | null;
-    categories?: CategoryInfo[]; // Added categories
+    categories?: CategoryInfo[];
   };
 }
 
@@ -58,14 +58,9 @@ export default function VideoCard({ video }: VideoCardProps) {
                       key={category.id}
                       className="inline-block text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600 px-2 py-0.5 rounded-full transition-colors whitespace-nowrap cursor-pointer"
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent card link navigation
-                        // If you need navigation, use router.push here, but ensure this span is focusable and has appropriate ARIA roles if it acts like a link
-                        // For now, it just stops propagation and looks like a badge.
-                        // import { useRouter } from 'next/navigation'; (at top of file)
-                        // const router = useRouter(); (inside component)
-                        // router.push(`/category/${category.slug}`);
+                        e.stopPropagation();
                       }}
-                      title={category.name} // Add title for accessibility
+                      title={category.name}
                     >
                       {category.name}
                     </span>
@@ -74,7 +69,6 @@ export default function VideoCard({ video }: VideoCardProps) {
               </div>
             )}
           </div>
-          {/* Placeholder for any other content at the bottom of the card if needed */}
         </div>
       </Link>
     </div>

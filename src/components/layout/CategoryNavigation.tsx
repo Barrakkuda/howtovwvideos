@@ -1,14 +1,9 @@
 import Link from "next/link";
-import { fetchPublicCategories } from "@/app/admin/categories/_actions/categoryActions"; // Adjust path as necessary
+import { fetchPublicCategories } from "@/app/admin/categories/_actions/categoryActions";
 import { List } from "lucide-react";
 
 export default async function CategoryNavigation() {
   const result = await fetchPublicCategories();
-  // console.log(
-  //   "[CategoryNavigation] Fetched categories result:",
-  //   // JSON.stringify(result, null, 2),
-  // );
-
   if (!result.success || !result.data || result.data.length === 0) {
     console.log(
       "[CategoryNavigation] No categories to display or fetch error.",

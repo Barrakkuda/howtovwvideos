@@ -11,8 +11,8 @@ export interface ActionResponse<T> {
   success: boolean;
   data?: T;
   message?: string;
-  errors?: Record<string, string[] | undefined>; // For field-specific errors
-  error?: string; // For general errors
+  errors?: Record<string, string[] | undefined>;
+  error?: string;
 }
 
 // Type for data returned to the DataTable
@@ -91,7 +91,7 @@ export async function addTag(
     const tagForTable: TagForTable = {
       ...newTag,
       description: newTag.description ?? null,
-      videoCount: 0, // Or fetch relations if absolutely needed here
+      videoCount: 0,
     };
 
     return {
@@ -199,8 +199,6 @@ export async function updateTag(
     });
 
     revalidatePath("/admin/tags");
-    // Revalidate public tag pages if they exist, e.g., revalidatePath(`/video/tag/${updatedTag.slug}`);
-    // For now, only admin revalidation.
 
     const tagForTable: TagForTable = {
       ...updatedTag,
@@ -257,9 +255,6 @@ export async function deleteTag(id: number): Promise<ActionResponse<never>> {
     });
 
     revalidatePath("/admin/tags");
-    // Also revalidate any public pages that might be affected
-    // e.g., revalidatePath(`/video/tag/${tagToDelete.slug}`);
-    // revalidatePath("/video/tag", "layout"); // if there's a popular tags list or similar
 
     return { success: true, message: "Tag deleted successfully." };
   } catch (error) {
@@ -319,7 +314,6 @@ export async function fetchTagsForTable(): Promise<
   }
 }
 
-// Example: Fetch tags for navigation, potentially ordered by popularity
 export async function fetchNavigationTags(
   limit: number = 10,
 ): Promise<
@@ -337,23 +331,16 @@ export async function fetchNavigationTags(
         _count: {
           select: {
             videos: {
-              // Assuming 'videos' is the relation name on Tag to TagsOnVideos
-              where: { video: { status: "PUBLISHED" } }, // Count only published videos
+              where: { video: { status: "PUBLISHED" } },
             },
           },
         },
       },
       orderBy: {
         videos: {
-          _count: "desc", // Order by the count of related videos
+          _count: "desc",
         },
       },
-      // Optionally filter out tags with no published videos
-      // where: {
-      //   videos: {
-      //     some: { video: { status: "PUBLISHED" } }
-      //   }
-      // }
     });
 
     const navigationTags = tags
@@ -439,11 +426,7 @@ export async function bulkGenerateSlugsForTags(
 
       const newSlug = slugify(tag.name);
 
-      // Only update if the new slug is different from the current one
       if (newSlug === tag.slug) {
-        // errors.push(`Tag ID ${id} ('${tag.name}') already has the correct slug ('${newSlug}'). No update needed.`);
-        // Or simply increment count if we consider "already correct" as a success.
-        // For now, let's only count actual updates.
         continue;
       }
 
@@ -487,10 +470,8 @@ export async function bulkGenerateSlugsForTags(
 
   if (errors.length > 0) {
     const errorMessage = `Processed ${ids.length} tags. ${updatedCount} slugs generated/updated. Errors: ${errors.join("; ")}`;
-    // Decide if this is a partial success or full failure based on errors.
-    // For now, returning success: false if any errors occurred.
     return {
-      success: updatedCount > 0 && errors.length < ids.length, // true if some succeeded without error
+      success: updatedCount > 0 && errors.length < ids.length,
       message:
         updatedCount > 0
           ? `${updatedCount} slug(s) generated. Some errors occurred.`

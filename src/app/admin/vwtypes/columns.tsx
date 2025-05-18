@@ -14,19 +14,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Keep AlertDialogTrigger if used directly
-import { deleteVWType, VWTypeForTable } from "./_actions/vwTypeActions"; // Correct path
+} from "@/components/ui/alert-dialog";
+import { deleteVWType, VWTypeForTable } from "./_actions/vwTypeActions";
 
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Define the props for the DeleteDialog if it were a separate component
 interface DeleteDialogProps {
   vwType: VWTypeForTable;
   onSuccess?: () => void;
-  // Add other props if necessary, like onCancel, isOpen, onOpenChange
 }
 
-// Updated function signature to accept handleOpenEditModal
 export const columns = (
   handleOpenEditModal: (vwType: VWTypeForTable) => void,
   showDeleteDialog: (vwType: VWTypeForTable) => void,
@@ -131,7 +128,7 @@ export const columns = (
         <div className="text-center w-full">{row.original.videoCount}</div>
       </div>
     ),
-    enableGlobalFilter: false, // Usually don't globally filter by count
+    enableGlobalFilter: false,
     enableSorting: true,
   },
   {
@@ -184,18 +181,16 @@ export const columns = (
   },
 ];
 
-// This is a basic structure for the delete confirmation dialog.
-// It will be typically managed and rendered in the PageClient component.
 export function DeleteVWTypeDialog({ vwType, onSuccess }: DeleteDialogProps) {
-  const [isOpen, setIsOpen] = useState(false); // Manage its own open state if used standalone
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleDelete = async () => {
     toast.promise(deleteVWType(vwType.id), {
       loading: `Deleting VWType "${vwType.name}"...`,
       success: (result) => {
         setIsOpen(false);
-        onSuccess?.(); // Call onSuccess callback if provided
-        return result.message; // Return message for success toast
+        onSuccess?.();
+        return result.message;
       },
       error: (err) => {
         setIsOpen(false);
@@ -206,8 +201,6 @@ export function DeleteVWTypeDialog({ vwType, onSuccess }: DeleteDialogProps) {
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      {/* Trigger would be here if this dialog controlled its own trigger */}
-      {/* <AlertDialogTrigger asChild><Button>Open Dialog</Button></AlertDialogTrigger> */}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete VWType?</AlertDialogTitle>

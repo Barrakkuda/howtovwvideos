@@ -38,7 +38,7 @@ export default function AdminSearchLogsPage() {
   });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({}); // Not used for actions here, but good to have
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const [totalPages, setTotalPages] = useState(0);
 
@@ -92,8 +92,6 @@ export default function AdminSearchLogsPage() {
   const handleResetTableConfig = useCallback(() => {
     setSorting([{ id: "createdAt", desc: true }]);
     setColumnFilters([]);
-    // For pagination, TanStack Table uses 0-indexed pageIndex, so we reset to 0.
-    // Our fetchSearchLogs action expects a 1-indexed page, so we adjust during the call.
     setPagination({ pageIndex: 0, pageSize: 20 });
     setColumnVisibility({});
     setGlobalFilter("");
@@ -114,14 +112,13 @@ export default function AdminSearchLogsPage() {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold">Search Log</h1>
-        {/* Add any top-level actions here if needed, e.g., export, clear logs (with confirmation) */}
       </div>
 
       <DataTable<SearchLogForTable, unknown>
         columns={columns}
         data={logs}
-        filterColumnPlaceholder="Search by term or IP..." // Adjust as needed
-        facetFilters={[]} // No facet filters for now, add if needed
+        filterColumnPlaceholder="Search by term or IP..."
+        facetFilters={[]}
         sorting={sorting}
         onSortingChange={setSorting}
         columnFilters={columnFilters}
@@ -137,8 +134,8 @@ export default function AdminSearchLogsPage() {
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         onResetTableConfig={handleResetTableConfig}
-        bulkActions={[]} // No bulk actions for now
-        pageCount={totalPages} // Pass totalPages as pageCount
+        bulkActions={[]}
+        pageCount={totalPages}
       />
     </>
   );
