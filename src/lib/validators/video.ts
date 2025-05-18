@@ -2,6 +2,15 @@ import { z } from "zod";
 import { VideoStatus, VideoPlatform } from "@generated/prisma";
 import { slugSchema } from "./commonSchemas";
 
+// Channel data schema for form
+const channelDataSchema = z
+  .object({
+    id: z.number(),
+    name: z.string(),
+    url: z.string().url(),
+  })
+  .optional();
+
 export const videoSchema = z.object({
   platform: z.nativeEnum(VideoPlatform),
   id: z.number().optional(),
@@ -19,12 +28,7 @@ export const videoSchema = z.object({
     .url({ message: "Invalid URL format" })
     .optional()
     .or(z.literal("")),
-  channelTitle: z.string().optional(),
-  channelUrl: z
-    .string()
-    .url({ message: "Invalid channel URL format" })
-    .optional()
-    .or(z.literal("")),
+  channelData: channelDataSchema,
   categoryIds: z
     .array(z.coerce.number().int().positive())
     .optional()

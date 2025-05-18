@@ -43,7 +43,7 @@ Your job is to analyze the provided video title and transcript, then decide if t
 Use the following decision logic:
 
 1. The video **must** be instructional or demonstrative in nature (not purely opinion, entertainment, or historical overview). The title might provide clues.
-2. The video **must clearly relate to** vintage air-cooled Volkswagen vehicles. If the car brand or engine type is not clearly stated or clearly implied from title or transcript, assume it is not VW.
+2. The video **must clearly relate to** vintage air-cooled Volkswagen vehicles. If the car brand is not clearly stated or clearly implied from title or transcript, assume it is not VW.
 3. If the video qualifies, classify it accordingly using the format below.
 4. If the video does not qualify, return the rejection format exactly.
 

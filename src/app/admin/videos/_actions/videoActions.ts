@@ -69,8 +69,6 @@ export async function addVideo(formData: VideoFormData) {
         description: data.description as string | null,
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
-        channelTitle: data.channelTitle as string | null,
-        channelUrl: data.channelUrl as string | null,
         transcript: data.transcript,
         status: data.status as VideoStatus,
         vwTypes:
@@ -212,8 +210,6 @@ export async function updateVideo(id: number, formData: VideoFormData) {
         description: data.description as string | null,
         url: data.url as string | null,
         thumbnailUrl: data.thumbnailUrl as string | null,
-        channelTitle: data.channelTitle as string | null,
-        channelUrl: data.channelUrl as string | null,
         transcript: data.transcript,
         status: data.status as VideoStatus,
         isHowToVWVideo:
@@ -408,85 +404,143 @@ export async function refetchVideoInfo(youtubeVideoId: string) {
   if (!youtubeVideoId) {
     return {
       success: false,
-      message: "YouTube Video ID is required to refetch information.",
+      message: "YouTube Video ID is required for refetching.",
+    };
+  }
+
+  const existingVideo = await prisma.video.findFirst({
+    where: { videoId: youtubeVideoId },
+  });
+
+  if (!existingVideo) {
+    return {
+      success: false,
+      message: `Video with YouTube ID "${youtubeVideoId}" not found in database.`,
     };
   }
 
   try {
-    const videoDetails = await getYouTubeVideoInfo(youtubeVideoId);
+    const ytResponse = await getYouTubeVideoInfo(youtubeVideoId);
 
-    if (!videoDetails.success || !videoDetails.data) {
+    if (!ytResponse.success || !ytResponse.data) {
       return {
         success: false,
         message:
-          videoDetails.error || "Failed to fetch video details from YouTube.",
+          ytResponse.error || "Failed to fetch video info from YouTube API.",
       };
     }
 
-    const {
-      title,
-      description,
-      thumbnailUrl,
-      publishedAt,
-      channelTitle,
-      channelUrl,
-    } = videoDetails.data;
+    const videoData = ytResponse.data;
+    let upsertedChannelId: number | undefined = undefined;
 
-    const dataToUpdate: Prisma.VideoUpdateInput = {
-      title: title,
-      description: description || null,
-      thumbnailUrl: thumbnailUrl || null,
-      channelTitle: channelTitle || null,
-      channelUrl: channelUrl || null,
-      // Add publishedAt from YouTube video data
-      ...(publishedAt && !isNaN(new Date(publishedAt).getTime())
-        ? { publishedAt: new Date(publishedAt) }
-        : { publishedAt: null }), // Explicitly set to null if not valid, to clear old value if any
-      processedAt: new Date(), // Mark as re-processed
+    // Upsert Channel information if available from YouTube response
+    if (videoData.channel) {
+      const channel = videoData.channel;
+      const channelPublishedAtDate = channel.publishedAt
+        ? new Date(channel.publishedAt)
+        : null;
+
+      try {
+        const upserted = await prisma.channel.upsert({
+          where: {
+            platform_platformChannelId: {
+              platform: channel.platform,
+              platformChannelId: channel.platformId,
+            },
+          },
+          create: {
+            platform: channel.platform,
+            platformChannelId: channel.platformId,
+            name: channel.name,
+            url: channel.url,
+            description: channel.description,
+            thumbnailUrl: channel.thumbnailUrl,
+            customUrl: channel.customUrl,
+            country: channel.country,
+            videoCount: channel.videoCount ?? 0,
+            subscriberCount: channel.subscriberCount ?? 0,
+            viewCount: channel.viewCount
+              ? BigInt(channel.viewCount)
+              : BigInt(0),
+            publishedAt:
+              channelPublishedAtDate && !isNaN(channelPublishedAtDate.getTime())
+                ? channelPublishedAtDate
+                : null,
+          },
+          update: {
+            name: channel.name,
+            url: channel.url,
+            description: channel.description,
+            thumbnailUrl: channel.thumbnailUrl,
+            customUrl: channel.customUrl,
+            country: channel.country,
+            videoCount: channel.videoCount ?? 0,
+            subscriberCount: channel.subscriberCount ?? 0,
+            viewCount: channel.viewCount
+              ? BigInt(channel.viewCount)
+              : BigInt(0),
+            publishedAt:
+              channelPublishedAtDate && !isNaN(channelPublishedAtDate.getTime())
+                ? channelPublishedAtDate
+                : null,
+            updatedAt: new Date(),
+          },
+        });
+        upsertedChannelId = upserted.id;
+      } catch (channelError) {
+        console.error("Error upserting channel during refetch:", channelError);
+        // Non-critical for refetch, video data can still be updated.
+      }
+    }
+
+    // Prepare video update data
+    const videoUpdateData: Prisma.VideoUpdateInput = {
+      title: videoData.title,
+      description: videoData.description || existingVideo.description, // Keep existing if new is null/empty
+      thumbnailUrl: videoData.thumbnailUrl || existingVideo.thumbnailUrl,
+      url: `https://www.youtube.com/watch?v=${videoData.id}`,
+      popularityScore:
+        videoData.popularityScore !== undefined
+          ? videoData.popularityScore
+          : existingVideo.popularityScore,
+      publishedAt:
+        videoData.publishedAt &&
+        !isNaN(new Date(videoData.publishedAt).getTime())
+          ? new Date(videoData.publishedAt)
+          : existingVideo.publishedAt, // Video's own publishedAt
+      // channelTitle and channelUrl are removed from Video model
+      processedAt: new Date(), // Mark as processed/refetched
     };
 
-    const existingVideo = await prisma.video.findUnique({
-      where: { videoId: youtubeVideoId },
-    });
-
-    if (!existingVideo) {
-      return {
-        success: false,
-        message: `Video with YouTube ID ${youtubeVideoId} not found in the database. Cannot update.`,
-      };
+    if (upsertedChannelId) {
+      videoUpdateData.channel = { connect: { id: upsertedChannelId } };
     }
 
-    // If slug is not already present, generate it
-    if (!existingVideo.slug) {
-      dataToUpdate.slug = slugify(title, { lower: true, strict: true });
-    }
-
-    const updatedVideo = await prisma.video.update({
-      where: { videoId: youtubeVideoId },
-      data: dataToUpdate,
+    await prisma.video.update({
+      where: { id: existingVideo.id },
+      data: videoUpdateData,
     });
 
-    revalidatePath(`/admin/videos/edit/${updatedVideo.id}`);
     revalidatePath("/admin/videos");
+    revalidatePath(`/admin/videos/edit/${existingVideo.id}`);
 
     return {
       success: true,
-      message: "Video information refetched and updated successfully!",
+      message: `Video "${videoData.title}" information refetched and updated successfully.`,
       data: {
-        title: updatedVideo.title,
-        description: updatedVideo.description,
-        thumbnailUrl: updatedVideo.thumbnailUrl,
-        // Potentially return other updated fields like publishedAt if the UI needs them immediately
+        // Return some of the core updated fields for potential UI updates
+        title: videoData.title,
+        description: videoUpdateData.description,
+        thumbnailUrl: videoUpdateData.thumbnailUrl,
       },
     };
   } catch (error) {
-    console.error("Error refetching video info:", error);
+    console.error(`Error refetching video info for ${youtubeVideoId}:`, error);
+    const errorMessage =
+      error instanceof Error ? error.message : "An unexpected error occurred.";
     return {
       success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred.",
+      message: `Failed to refetch video info: ${errorMessage}`,
     };
   }
 }

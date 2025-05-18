@@ -315,10 +315,10 @@ export default function AdminVWTypesPageClient() {
       </div>
 
       <DataTable<VWTypeForTable, unknown>
-        columns={vwTypeColumns as ColumnDef<VWTypeForTable, unknown>[]} // Cast needed if using functional columns
+        columns={vwTypeColumns as ColumnDef<VWTypeForTable, unknown>[]}
         data={vwTypes}
-        filterColumnPlaceholder="Search by ame, slug..."
-        facetFilters={[]} // No facet filters for VWTypes for now, add if needed
+        filterColumnPlaceholder="Search by name, slug..."
+        facetFilters={[]}
         sorting={sorting}
         onSortingChange={setSorting}
         columnFilters={columnFilters}

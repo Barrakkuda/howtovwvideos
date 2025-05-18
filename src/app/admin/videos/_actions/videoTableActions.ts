@@ -9,6 +9,7 @@ import {
   VWTypesOnVideos,
   Tag,
   TagsOnVideos,
+  Channel,
 } from "@generated/prisma";
 
 export interface VideoForTable extends Video {
@@ -21,6 +22,7 @@ export interface VideoForTable extends Video {
   tags: (TagsOnVideos & {
     tag: Tag;
   })[];
+  channel?: Channel | null;
 }
 
 interface FetchVideosResponse {
@@ -48,6 +50,7 @@ export async function fetchVideosForTable(): Promise<FetchVideosResponse> {
             tag: true,
           },
         },
+        channel: true,
       },
       orderBy: {
         createdAt: "desc",

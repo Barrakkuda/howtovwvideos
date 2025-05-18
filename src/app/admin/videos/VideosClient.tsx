@@ -576,6 +576,7 @@ export default function AdminVideosPageClient() {
         onRowSelectionChange={setRowSelection}
         onResetTableConfig={handleResetTableConfig}
         bulkActions={videoBulkActions}
+        enableColumnPinning={true}
         initialColumnPinning={{ right: ["actions"] }}
       />
 

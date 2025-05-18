@@ -33,6 +33,7 @@ export default async function EditVideoPage({ params }: EditVideoPageProps) {
         tags: {
           include: { tag: true },
         },
+        channel: true,
       },
     }),
     prisma.category.findMany({

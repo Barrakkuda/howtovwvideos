@@ -102,8 +102,8 @@ interface DataTableProps<TData, TValue> {
   onResetTableConfig: () => void;
   bulkActions?: BulkAction<TData>[];
   pageCount?: number;
-  enableColumnPinning?: boolean; // Added prop
-  initialColumnPinning?: ColumnPinningState; // <<< ADD THIS LINE
+  enableColumnPinning?: boolean;
+  initialColumnPinning?: ColumnPinningState;
 }
 
 // --- Helper Functions ---
@@ -178,8 +178,8 @@ export function DataTable<TData, TValue>({
   onResetTableConfig,
   bulkActions = [],
   pageCount,
-  enableColumnPinning = true, // Default to true
-  initialColumnPinning, // <<< ADD THIS LINE
+  enableColumnPinning = false,
+  initialColumnPinning,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable<TData>({
     data,
@@ -191,9 +191,7 @@ export function DataTable<TData, TValue>({
       rowSelection,
       globalFilter,
       pagination,
-    },
-    initialState: {
-      columnPinning: initialColumnPinning,
+      columnPinning: enableColumnPinning ? initialColumnPinning || {} : {},
     },
     // Pipeline
     getCoreRowModel: getCoreRowModel(),
@@ -220,7 +218,7 @@ export function DataTable<TData, TValue>({
     filterFns: {
       arrIncludesSome,
     },
-    enableColumnPinning: enableColumnPinning, // Added option
+    enableColumnPinning: enableColumnPinning,
   });
 
   return (

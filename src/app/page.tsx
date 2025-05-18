@@ -1,10 +1,7 @@
 import Header from "@/components/layout/Header";
-import VideoGrid from "@/components/video/VideoGrid";
-import Sidebar from "@/components/layout/Sidebar";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import HeroCarousel from "@/components/layout/HeroCarousel";
-import HomePageSearch from "@/components/search/HomePageSearch";
 import { VideoCarousel } from "@/components/video/VideoCarousel";
 import {
   getRecentPopularVideos,

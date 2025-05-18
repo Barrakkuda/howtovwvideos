@@ -24,6 +24,7 @@ type VideoWithDetails = Prisma.VideoGetPayload<{
     tags: {
       include: { tag: true };
     };
+    channel: true;
   };
 }>;
 
@@ -62,6 +63,13 @@ export default function EditVideoFormWrapper({
     vwTypes: video.vwTypes.map((vot) => vot.vwType.slug) || [],
     popularityScore: video.popularityScore ?? undefined,
     publishedAt: video.publishedAt || undefined,
+    channelData: video.channel
+      ? {
+          id: video.channel.id,
+          name: video.channel.name,
+          url: video.channel.url,
+        }
+      : undefined,
   };
 
   async function handleSubmitVideo(data: VideoFormData) {

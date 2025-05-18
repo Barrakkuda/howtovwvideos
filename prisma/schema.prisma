@@ -16,8 +16,6 @@ model Video {
   description     String?
   url             String?
   thumbnailUrl    String?
-  channelTitle    String?
-  channelUrl      String?
   transcript      String?
   status          VideoStatus          @default(DRAFT)
   isHowToVWVideo  Boolean              @default(false)
@@ -30,8 +28,12 @@ model Video {
   processedAt     DateTime?
   popularityScore Float?
   publishedAt     DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+
+  channelId Int?
+  channel   Channel? @relation(fields: [channelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
@@ -123,4 +125,32 @@ model SearchLog {
 
   @@index([createdAt])
   @@index([term])
+}
+
+// New Channel Model
+model Channel {
+  id                Int           @id @default(autoincrement())
+  platformChannelId String // ID from the platform (e.g. YouTube channel ID)
+  platform          VideoPlatform // To distinguish between YouTube, Vimeo channels etc.
+  name              String
+  url               String // URL to the channel page
+  description       String?
+  thumbnailUrl      String?
+  customUrl         String? // Optional custom URL (e.g. youtube.com/c/ChannelName)
+  country           String? // Optional channel country
+
+  videoCount      Int?    @default(0)
+  subscriberCount Int?    @default(0)
+  viewCount       BigInt? @default(0) // Channel total views can be large
+
+  publishedAt DateTime? // Channel creation/publication date
+
+  videos Video[] // Relation to videos this channel has
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([platform, platformChannelId]) // Ensure platform-specific channel ID is unique per platform
+  @@index([name])
+  @@index([platformChannelId])
 }

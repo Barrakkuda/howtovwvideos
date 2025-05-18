@@ -1,13 +1,29 @@
 import { YoutubeTranscript } from "youtube-transcript";
+import { VideoPlatform } from "@generated/prisma";
+
+// New interface for detailed channel information
+export interface YouTubeChannelDetails {
+  platformId: string; // YouTube Channel ID
+  name: string;
+  url: string;
+  thumbnailUrl?: string;
+  description?: string;
+  customUrl?: string;
+  country?: string;
+  publishedAt?: string; // Channel's publishedAt
+  subscriberCount?: number;
+  videoCount?: number;
+  viewCount?: number; // Total views for the channel's videos
+  platform: VideoPlatform;
+}
 
 export interface YouTubeVideoItem {
-  id: string;
+  id: string; // Video ID
   title: string;
   description: string;
   thumbnailUrl: string;
-  channelTitle: string;
-  channelUrl: string;
-  publishedAt: string;
+  channel?: YouTubeChannelDetails; // Nested channel details
+  publishedAt: string; // Video's publishedAt
   viewCount?: number;
   likeCount?: number;
   popularityScore?: number;
@@ -31,31 +47,75 @@ interface YouTubeApiError {
   message?: string;
 }
 
-interface YouTubeApiItem {
-  id: { videoId: string };
+// For Video API Item
+interface YouTubeVideoApiItemSnippet {
+  title: string;
+  description: string;
+  thumbnails: {
+    default: { url: string };
+    medium?: { url: string };
+    high?: { url: string };
+    standard?: { url: string };
+    maxres?: { url: string };
+  };
+  channelTitle: string;
+  publishedAt: string; // Video published at
+  channelId: string;
+}
+
+interface YouTubeVideoApiItemStatistics {
+  viewCount: string;
+  likeCount: string;
+  commentCount: string; // Though we don't use it now
+}
+
+interface YouTubeVideoApiItem {
+  id: string; // Video ID
+  snippet: YouTubeVideoApiItemSnippet;
+  statistics?: YouTubeVideoApiItemStatistics;
+}
+
+// For Channel API Item
+interface YouTubeChannelApiItem {
+  id: string; // Channel ID
   snippet: {
     title: string;
-    description: string;
+    description?: string;
+    customUrl?: string;
+    publishedAt?: string; // Channel published at
     thumbnails: {
-      default: { url: string };
+      default?: { url: string };
       medium?: { url: string };
       high?: { url: string };
-      standard?: { url: string };
-      maxres?: { url: string };
     };
-    channelTitle: string;
-    publishedAt: string;
-    channelId: string;
+    country?: string;
   };
-  statistics?: {
-    viewCount: string;
-    likeCount: string;
-    commentCount: string;
+  statistics: {
+    viewCount: string; // Channel total views
+    subscriberCount: string;
+    hiddenSubscriberCount: boolean;
+    videoCount: string;
+  };
+  brandingSettings?: {
+    // For more thumbnail options, though usually snippet.thumbnails is enough
+    image?: {
+      bannerExternalUrl?: string;
+    };
   };
 }
 
+interface YouTubeSearchApiResultItem {
+  kind: string;
+  etag: string;
+  id: {
+    kind: string;
+    videoId: string;
+  };
+  snippet: YouTubeVideoApiItemSnippet; // Assuming YouTubeVideoApiItemSnippet is defined above
+}
+
 const YOUTUBE_API_KEY = process.env.YOUTUBE_DATA_API_KEY;
-const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/search";
+const YOUTUBE_API_BASE_URL = "https://www.googleapis.com/youtube/v3";
 
 function decodeHtmlEntities(text: string): string {
   if (!text) return "";
@@ -71,62 +131,204 @@ function decodeHtmlEntities(text: string): string {
 export function calculatePopularityScore(
   viewCountInput: number | undefined | null,
   likeCountInput: number | undefined | null,
-  publishedAt: string | Date | undefined | null,
+  publishedAt: string | Date | undefined | null, // Video's publishedAt
 ): number | null {
-  // The main check for publishedAt is still critical
   if (!publishedAt) {
     console.log(
-      "[DEBUG] calculatePopularityScore returning null due to missing publishedAt.",
+      "[DEBUG] calculatePopularityScore returning null due to missing video publishedAt.",
     );
     return null;
   }
-
-  const views = Number(viewCountInput); // Number(null) is 0, Number(undefined) is NaN. We addressed this in getYouTubeVideoInfo.
-  const likes = Number(likeCountInput); // Number(null) is 0, Number(undefined) is NaN. We addressed this in getYouTubeVideoInfo.
-
-  // If views or likes became NaN here, it means the input from getYouTubeVideoInfo was not properly defaulted.
-  // However, with the changes in getYouTubeVideoInfo, views and likes should be numbers (or 0).
-
+  const views = Number(viewCountInput);
+  const likes = Number(likeCountInput);
   const now = new Date();
-  const publishedDate = new Date(publishedAt);
-  if (isNaN(publishedDate.getTime())) {
-    // More robust date check
+  const videoPublishedDate = new Date(publishedAt);
+  if (isNaN(videoPublishedDate.getTime())) {
     console.log(
-      "[DEBUG] calculatePopularityScore returning null due to invalid publishedAt date.",
+      "[DEBUG] calculatePopularityScore returning null due to invalid video publishedAt date.",
     );
     return null;
   }
-  const ageInMilliseconds = now.getTime() - publishedDate.getTime();
+  const ageInMilliseconds = now.getTime() - videoPublishedDate.getTime();
   const ageInDays = Math.max(1, ageInMilliseconds / (1000 * 60 * 60 * 24));
-
-  // It's good practice to check if ageInDays is valid, though Math.max(1,...) should prevent division by zero or NaN here.
   if (isNaN(ageInDays) || ageInDays <= 0) {
     console.log(
-      "[DEBUG] calculatePopularityScore returning null due to invalid ageInDays.",
+      "[DEBUG] calculatePopularityScore returning null due to invalid ageInDays for video.",
     );
     return null;
   }
-
   const viewsPerDay = views / ageInDays;
   const likesPerDay = likes / ageInDays;
-
-  // Define weights for each factor
   const WEIGHT_VIEWS_RATE = 0.6;
   const WEIGHT_LIKES_RATE = 0.4;
-
   const score =
     WEIGHT_VIEWS_RATE * viewsPerDay + WEIGHT_LIKES_RATE * likesPerDay;
   if (isNaN(score)) {
-    console.log("[DEBUG] Score is NaN. Inputs:", {
+    console.log("[DEBUG] Popularity score is NaN. Inputs:", {
       views,
       likes,
       ageInDays,
       viewsPerDay,
       likesPerDay,
     });
-    return null; // Explicitly return null if score is NaN
+    return null;
   }
   return parseFloat(score.toFixed(4));
+}
+
+async function getYouTubeChannelDetailsByApi( // Renamed to avoid conflict if you had another
+  channelPlatformId: string,
+): Promise<YouTubeChannelDetails | null> {
+  if (!YOUTUBE_API_KEY) {
+    console.error("YouTube API key is not configured for channel details.");
+    return null;
+  }
+  if (!channelPlatformId) {
+    console.error("Channel ID is required to fetch channel details.");
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    key: YOUTUBE_API_KEY,
+    id: channelPlatformId,
+    part: "snippet,statistics,brandingSettings", // brandingSettings for more image options if needed
+  });
+  const fetchUrl = `${YOUTUBE_API_BASE_URL}/channels?${params.toString()}`;
+
+  try {
+    const response = await fetch(fetchUrl);
+    const data = await response.json();
+
+    if (!response.ok || !data.items || data.items.length === 0) {
+      console.error(
+        `Failed to fetch channel details for ID ${channelPlatformId}:`,
+        data.error?.message || "Channel not found or API error",
+      );
+      return null;
+    }
+
+    const item: YouTubeChannelApiItem = data.items[0];
+    const snippet = item.snippet;
+    const stats = item.statistics;
+
+    let channelThumbnail = snippet.thumbnails?.default?.url;
+    if (snippet.thumbnails?.medium?.url)
+      channelThumbnail = snippet.thumbnails.medium.url;
+    if (snippet.thumbnails?.high?.url)
+      channelThumbnail = snippet.thumbnails.high.url;
+
+    const channelUrl = item.snippet.customUrl
+      ? `https://www.youtube.com/${item.snippet.customUrl}`
+      : `https://www.youtube.com/channel/${item.id}`;
+
+    return {
+      platformId: item.id,
+      name: decodeHtmlEntities(snippet.title),
+      url: channelUrl,
+      thumbnailUrl: channelThumbnail,
+      description: snippet.description
+        ? decodeHtmlEntities(snippet.description)
+        : undefined,
+      customUrl: snippet.customUrl
+        ? decodeHtmlEntities(snippet.customUrl)
+        : undefined,
+      country: snippet.country,
+      publishedAt: snippet.publishedAt, // Channel's published date
+      subscriberCount: stats.hiddenSubscriberCount
+        ? undefined
+        : parseInt(stats.subscriberCount) || 0,
+      videoCount: parseInt(stats.videoCount) || 0,
+      viewCount: parseInt(stats.viewCount) || 0,
+      platform: VideoPlatform.YOUTUBE,
+    };
+  } catch (error) {
+    console.error(
+      `Error fetching channel details for ID ${channelPlatformId}:`,
+      error,
+    );
+    return null;
+  }
+}
+
+export async function getYouTubeVideoInfo(
+  videoId: string,
+): Promise<YouTubeVideoInfoResponse> {
+  if (!YOUTUBE_API_KEY) {
+    console.error("YouTube API key is not configured.");
+    return { success: false, error: "YouTube API key not configured." };
+  }
+  if (!videoId) {
+    return { success: false, error: "Video ID is required." };
+  }
+
+  const videoParams = new URLSearchParams({
+    key: YOUTUBE_API_KEY,
+    id: videoId,
+    part: "snippet,statistics",
+  });
+  const videoFetchUrl = `${YOUTUBE_API_BASE_URL}/videos?${videoParams.toString()}`;
+
+  try {
+    const videoResponse = await fetch(videoFetchUrl);
+    const videoData = await videoResponse.json();
+
+    if (!videoResponse.ok) {
+      console.error(
+        "YouTube API Error (Video Info):",
+        videoData.error?.message || videoData,
+      );
+      return {
+        success: false,
+        error: videoData.error?.message || "Unknown API error fetching video.",
+      };
+    }
+    if (!videoData.items || videoData.items.length === 0) {
+      return { success: false, error: "Video not found." };
+    }
+
+    const videoItem: YouTubeVideoApiItem = videoData.items[0];
+    const snippet = videoItem.snippet;
+    const statistics = videoItem.statistics;
+
+    const thumbs = snippet.thumbnails;
+    let selectedThumbnailUrl = thumbs.default.url;
+    if (thumbs.standard?.url) selectedThumbnailUrl = thumbs.standard.url;
+    else if (thumbs.high?.url) selectedThumbnailUrl = thumbs.high.url;
+    else if (thumbs.medium?.url) selectedThumbnailUrl = thumbs.medium.url;
+
+    let channelData: YouTubeChannelDetails | null = null;
+    if (snippet.channelId) {
+      channelData = await getYouTubeChannelDetailsByApi(snippet.channelId);
+    }
+
+    const viewCount = statistics ? parseInt(statistics.viewCount) || 0 : 0;
+    const likeCount = statistics ? parseInt(statistics.likeCount) || 0 : 0;
+    const popularityScoreValue = calculatePopularityScore(
+      viewCount,
+      likeCount,
+      snippet.publishedAt, // Video's publishedAt for score calculation
+    );
+
+    const videoInfo: YouTubeVideoItem = {
+      id: videoItem.id,
+      title: decodeHtmlEntities(snippet.title),
+      description: decodeHtmlEntities(snippet.description),
+      thumbnailUrl: selectedThumbnailUrl,
+      publishedAt: snippet.publishedAt, // Video's publishedAt
+      viewCount: viewCount,
+      likeCount: likeCount,
+      channel: channelData ?? undefined,
+      popularityScore:
+        popularityScoreValue === null ? undefined : popularityScoreValue,
+    };
+    return { success: true, data: videoInfo };
+  } catch (error) {
+    console.error("Failed to fetch from YouTube API (Video Info):", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unexpected error.",
+    };
+  }
 }
 
 export async function searchYouTubeVideos(
@@ -135,13 +337,8 @@ export async function searchYouTubeVideos(
 ): Promise<YouTubeSearchResponse> {
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");
-    return {
-      success: false,
-      error:
-        "YouTube API key is not configured. Please check server configuration.",
-    };
+    return { success: false, error: "YouTube API key not configured." };
   }
-
   if (!query.trim()) {
     return { success: false, error: "Search query cannot be empty." };
   }
@@ -151,22 +348,19 @@ export async function searchYouTubeVideos(
     q: query,
     part: "snippet",
     type: "video",
+    maxResults: maxResults.toString(),
   });
-  params.append("maxResults", maxResults.toString());
-
-  const fetchUrl = `${YOUTUBE_API_URL}?${params.toString()}`;
+  const fetchUrl = `${YOUTUBE_API_BASE_URL}/search?${params.toString()}`;
 
   try {
     const response = await fetch(fetchUrl);
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("YouTube API Error:", data.error?.message || data);
       const errorMessage =
-        data.error?.message ||
-        "An unknown error occurred with the YouTube API.";
+        data.error?.message || "Unknown API error during search.";
       const isQuotaError = data.error?.errors?.some(
-        (e: YouTubeApiError) => e.reason === "quotaExceeded",
+        (e: YouTubeApiError) => e.reason === "quotaExceeded", // Ensure YouTubeApiError is defined
       );
       return {
         success: false,
@@ -174,68 +368,35 @@ export async function searchYouTubeVideos(
         quotaExceeded: isQuotaError,
       };
     }
-
     if (!data.items || data.items.length === 0) {
       return { success: true, data: [] };
     }
 
-    const videos: YouTubeVideoItem[] = await Promise.all(
-      data.items.map(async (item: YouTubeApiItem) => {
-        // Get full video details using videos.list endpoint
-        const fullVideoInfo = await getYouTubeVideoInfo(item.id.videoId);
-
-        if (fullVideoInfo.success && fullVideoInfo.data) {
-          return fullVideoInfo.data;
+    const videoPromises = data.items.map(
+      async (item: YouTubeSearchApiResultItem) => {
+        // Corrected type here
+        if (item.id?.videoId) {
+          const fullVideoInfo = await getYouTubeVideoInfo(item.id.videoId);
+          if (fullVideoInfo.success && fullVideoInfo.data) {
+            return fullVideoInfo.data;
+          }
         }
-
-        // Fallback to search result data if full video info fetch fails
-        const thumbs = item.snippet.thumbnails;
-        let selectedThumbnailUrl = thumbs.default.url;
-
-        if (thumbs.standard?.url) {
-          selectedThumbnailUrl = thumbs.standard.url;
-        } else if (thumbs.high?.url) {
-          selectedThumbnailUrl = thumbs.high.url;
-        } else if (thumbs.medium?.url) {
-          selectedThumbnailUrl = thumbs.medium.url;
-        }
-
-        const snippet = item.snippet;
-
-        if (!snippet) {
-          console.warn(
-            `Snippet or statistics missing for video ID: ${item.id.videoId}`,
-          );
-          return null;
-        }
-
-        return {
-          id: item.id.videoId,
-          title: decodeHtmlEntities(item.snippet.title),
-          description: decodeHtmlEntities(item.snippet.description),
-          thumbnailUrl: selectedThumbnailUrl,
-          channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
-          channelUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.snippet.channelTitle)}`,
-          publishedAt: item.snippet.publishedAt,
-          viewCount: item.statistics
-            ? parseInt(item.statistics.viewCount) || 0
-            : undefined,
-          likeCount: item.statistics
-            ? parseInt(item.statistics.likeCount) || 0
-            : undefined,
-        };
-      }),
+        console.warn(
+          `Could not retrieve full info for search result item: ${item.id?.videoId}`,
+        );
+        return null;
+      },
     );
 
-    return { success: true, data: videos };
+    const videosWithDetails = (await Promise.all(videoPromises)).filter(
+      (video): video is YouTubeVideoItem => video !== null, // Ensure YouTubeVideoItem is defined
+    );
+    return { success: true, data: videosWithDetails };
   } catch (error) {
-    console.error("Failed to fetch from YouTube API:", error);
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
+    console.error("Failed to fetch from YouTube API (Search):", error);
     return {
       success: false,
-      error: "An unexpected error occurred while fetching videos.",
+      error: error instanceof Error ? error.message : "Unexpected error.",
     };
   }
 }
@@ -246,10 +407,8 @@ export async function getYouTubeTranscript(
   if (!videoId) {
     return { success: false, error: "Video ID is required." };
   }
-
   let retries = 3;
   let lastError: unknown = null;
-
   while (retries > 0) {
     try {
       const transcriptResponse =
@@ -258,165 +417,52 @@ export async function getYouTubeTranscript(
         const rawTranscriptText = transcriptResponse
           .map((line) => line.text)
           .join(" ");
-        const decodedTranscriptText = decodeHtmlEntities(rawTranscriptText);
-        return { success: true, transcript: decodedTranscriptText };
+        return {
+          success: true,
+          transcript: decodeHtmlEntities(rawTranscriptText),
+        };
       } else {
-        // Transcript was "found" but is empty. No need to retry.
         return { success: false, error: "No transcript found or it is empty." };
       }
     } catch (error) {
       lastError = error;
       retries--;
       console.warn(
-        `Attempt to fetch transcript for video ID ${videoId} failed. Retries left: ${retries}`,
+        `Transcript fetch attempt for ${videoId} failed. Retries left: ${retries}`,
         error,
       );
       if (retries > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } else {
-        // All retries failed, proceed to the main error handling below
         break;
       }
     }
   }
-
-  // If loop finishes due to retries exhausted, lastError will be set
-  // The original catch block will handle formatting this error
   console.error(
-    `All attempts to fetch transcript for video ID ${videoId} failed. Last error:`,
+    `All transcript fetch attempts for ${videoId} failed. Last error:`,
     lastError,
   );
   let errorMessage = "Failed to fetch transcript after multiple attempts.";
   if (lastError instanceof Error) {
-    if (lastError.message.includes("disabled transcripts")) {
+    if (lastError.message.includes("disabled transcripts"))
       errorMessage = "Transcripts are disabled for this video.";
-    } else if (lastError.message.includes("no transcripts are available")) {
-      errorMessage = "No transcripts are available for this video.";
-    } else {
-      errorMessage = `Failed to fetch transcript: ${lastError.message}`;
-    }
+    else if (lastError.message.includes("no transcripts are available"))
+      errorMessage = "No transcripts available.";
+    else errorMessage = `Failed to fetch transcript: ${lastError.message}`;
   }
-
   return { success: false, error: errorMessage };
-}
-
-export async function getYouTubeVideoInfo(
-  videoId: string,
-): Promise<YouTubeVideoInfoResponse> {
-  if (!YOUTUBE_API_KEY) {
-    console.error("YouTube API key is not configured.");
-    return {
-      success: false,
-      error:
-        "YouTube API key is not configured. Please check server configuration.",
-    };
-  }
-
-  if (!videoId) {
-    return { success: false, error: "Video ID is required." };
-  }
-
-  const params = new URLSearchParams({
-    key: YOUTUBE_API_KEY,
-    id: videoId,
-    part: "snippet,statistics",
-  });
-
-  const fetchUrl = `${YOUTUBE_API_URL.replace("/search", "/videos")}?${params.toString()}`;
-
-  try {
-    const response = await fetch(fetchUrl);
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("YouTube API Error:", data.error?.message || data);
-      const errorMessage =
-        data.error?.message ||
-        "An unknown error occurred with the YouTube API.";
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
-
-    if (!data.items || data.items.length === 0) {
-      return { success: false, error: "Video not found." };
-    }
-
-    const item = data.items[0];
-    const snippet = item.snippet;
-    const statistics = item.statistics;
-
-    const thumbs = snippet.thumbnails;
-    let selectedThumbnailUrl = thumbs.default.url;
-
-    if (thumbs.standard?.url) {
-      selectedThumbnailUrl = thumbs.standard.url;
-    } else if (thumbs.high?.url) {
-      selectedThumbnailUrl = thumbs.high.url;
-    } else if (thumbs.medium?.url) {
-      selectedThumbnailUrl = thumbs.medium.url;
-    }
-
-    // Get channel ID from the snippet
-    const channelId = snippet.channelId;
-    const channelUrl = `https://www.youtube.com/channel/${channelId}`;
-
-    // --- Calculate Popularity Score ---
-    const viewCount = statistics ? parseInt(statistics.viewCount) || 0 : 0;
-    const likeCount = statistics ? parseInt(statistics.likeCount) || 0 : 0;
-
-    console.log("[DEBUG] Values passed to calculatePopularityScore:", {
-      viewCount,
-      likeCount,
-      publishedAt: snippet?.publishedAt,
-    });
-
-    const popularityScoreValue = calculatePopularityScore(
-      viewCount,
-      likeCount,
-      snippet?.publishedAt,
-    );
-
-    const videoInfo: YouTubeVideoItem = {
-      id: item.id,
-      title: decodeHtmlEntities(snippet.title),
-      description: decodeHtmlEntities(snippet.description),
-      thumbnailUrl: selectedThumbnailUrl,
-      channelTitle: decodeHtmlEntities(snippet.channelTitle),
-      channelUrl,
-      publishedAt: snippet.publishedAt,
-      viewCount: viewCount,
-      likeCount: likeCount,
-      popularityScore:
-        popularityScoreValue === null ? undefined : popularityScoreValue,
-    };
-
-    return { success: true, data: videoInfo };
-  } catch (error) {
-    console.error("Failed to fetch from YouTube API:", error);
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-    return {
-      success: false,
-      error: "An unexpected error occurred while fetching video information.",
-    };
-  }
 }
 
 // Interface for the status of a single video from our new function
 export interface YouTubeVideoStatus {
   id: string;
   found: boolean;
-  uploadStatus?: string; // e.g., "processed", "failed", "deleted", "rejected"
-  privacyStatus?: string; // e.g., "public", "private", "unlisted"
+  uploadStatus?: string;
+  privacyStatus?: string;
   embeddable?: boolean;
-  liveBroadcastContent?: string; // "none", "live", "upcoming"
-  // Add other relevant status fields if needed
+  liveBroadcastContent?: string;
 }
 
-// Define a more specific type for the status object from YouTube API's video item
 interface YouTubeApiVideoStatusObject {
   uploadStatus: string;
   privacyStatus: string;
@@ -425,10 +471,9 @@ interface YouTubeApiVideoStatusObject {
   publicStatsViewable: boolean;
   madeForKids?: boolean;
   selfDeclaredMadeForKids?: boolean;
-  liveBroadcastContent?: string; // Added this as it's in YouTubeVideoStatus
+  liveBroadcastContent?: string;
 }
 
-// The new function to get publication statuses for multiple video IDs
 export async function getVideoPublicationStatuses(videoIds: string[]): Promise<{
   success: boolean;
   statuses?: YouTubeVideoStatus[];
@@ -437,51 +482,39 @@ export async function getVideoPublicationStatuses(videoIds: string[]): Promise<{
 }> {
   if (!YOUTUBE_API_KEY) {
     console.error("YouTube API key is not configured.");
-    return {
-      success: false,
-      error: "YouTube API key not configured.",
-    };
+    return { success: false, error: "YouTube API key not configured." };
   }
   if (!videoIds || videoIds.length === 0) {
-    return { success: true, statuses: [] }; // No IDs, no work, success.
+    return { success: true, statuses: [] };
   }
   if (videoIds.length > 50) {
-    // YouTube API limit for videos.list by ID is 50.
-    // This function could be enhanced to handle >50 by batching, but for now, it errors.
-    // For a robust cron job, batching would be implemented here or in the calling service.
     console.warn(
-      "getVideoPublicationStatuses called with >50 video IDs. API limit is 50. Processing only first 50.",
+      "getVideoPublicationStatuses called with >50 video IDs. API limit is 50.",
     );
-    // For simplicity in this step, we'll just slice. A real implementation would batch.
-    // videoIds = videoIds.slice(0, 50); // Or error out as below:
     return {
       success: false,
-      error:
-        "Cannot fetch more than 50 video statuses at once with this version. Please implement batching.",
+      error: "Cannot fetch >50 video statuses at once. Implement batching.",
     };
   }
 
   const params = new URLSearchParams({
     key: YOUTUBE_API_KEY,
     id: videoIds.join(","),
-    part: "status,id", // Requesting status and id parts
+    part: "status,id",
   });
-
-  const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`;
+  const fetchUrl = `${YOUTUBE_API_BASE_URL}/videos?${params.toString()}`;
   const results: YouTubeVideoStatus[] = [];
 
   try {
     const response = await fetch(fetchUrl);
-    const data = await response.json(); // Assuming youtube_v3.Schema$VideoListResponse structure
+    const data = await response.json();
 
     if (!response.ok) {
       console.error(
         "YouTube API Error (getVideoPublicationStatuses):",
         data.error?.message || data,
       );
-      const errorMessage =
-        data.error?.message ||
-        "An unknown error occurred with the YouTube API.";
+      const errorMessage = data.error?.message || "Unknown API error.";
       const isQuotaError = data.error?.errors?.some(
         (e: YouTubeApiError) => e.reason === "quotaExceeded",
       );
@@ -492,19 +525,15 @@ export async function getVideoPublicationStatuses(videoIds: string[]): Promise<{
       };
     }
 
-    const statusMap = new Map<string, YouTubeApiVideoStatusObject>(); // Use the new interface
+    const statusMap = new Map<string, YouTubeApiVideoStatusObject>();
     if (data.items && Array.isArray(data.items)) {
-      // Add Array.isArray check for robustness
       for (const item of data.items) {
-        // item should be typed if possible, e.g., { id: string; status: YouTubeApiVideoStatusObject }
         if (item && typeof item.id === "string" && item.status) {
-          // Ensure item.id and item.status exist
           statusMap.set(item.id, item.status as YouTubeApiVideoStatusObject);
         }
       }
     }
 
-    // Ensure all requested IDs have an entry, even if not found by API
     for (const reqId of videoIds) {
       const statusDetail = statusMap.get(reqId);
       if (statusDetail) {
@@ -514,13 +543,10 @@ export async function getVideoPublicationStatuses(videoIds: string[]): Promise<{
           uploadStatus: statusDetail.uploadStatus,
           privacyStatus: statusDetail.privacyStatus,
           embeddable: statusDetail.embeddable,
-          liveBroadcastContent: statusDetail.liveBroadcastContent, // This might not be on statusDetail if not on YouTubeApiVideoStatusObject
+          liveBroadcastContent: statusDetail.liveBroadcastContent,
         });
       } else {
-        results.push({
-          id: reqId,
-          found: false, // Video ID not found in API response
-        });
+        results.push({ id: reqId, found: false });
       }
     }
     return { success: true, statuses: results };
@@ -528,10 +554,7 @@ export async function getVideoPublicationStatuses(videoIds: string[]): Promise<{
     console.error("Failed to fetch video statuses from YouTube API:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred.",
+      error: error instanceof Error ? error.message : "Unexpected error.",
     };
   }
 }

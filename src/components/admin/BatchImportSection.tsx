@@ -31,7 +31,7 @@ export default function BatchImportSection() {
     try {
       // Dynamically import the action
       const { batchImportYouTubeVideosAction } = await import(
-        "@/app/admin/youtube-import/_actions/importActions"
+        "@/app/admin/import-videos/_actions/importActions"
       );
 
       const results = await batchImportYouTubeVideosAction(searchQuery);

@@ -61,7 +61,10 @@ export async function importYouTubeVideo(
     return { success: false, message: "Invalid video data provided." };
   }
 
-  const generatedSlug = slugify(videoData.title, { lower: true, strict: true });
+  // Only generate slug for HowToVW videos
+  const generatedSlug = isHowToVWVideo
+    ? slugify(videoData.title, { lower: true, strict: true })
+    : null;
 
   // Fetch all existing VWType slugs for validation
   const allDbVwTypes = await prisma.vWType.findMany({
@@ -83,6 +86,63 @@ export async function importYouTubeVideo(
       success: false,
       message: "No category information provided for a How-To VW video.",
     };
+  }
+
+  // Upsert Channel information if available, but only for HowToVW videos
+  let upsertedChannelId: number | undefined = undefined;
+  if (videoData.channel && isHowToVWVideo) {
+    const channel = videoData.channel;
+    const channelPublishedAtDate = channel.publishedAt
+      ? new Date(channel.publishedAt)
+      : null;
+
+    try {
+      const upserted = await prisma.channel.upsert({
+        where: {
+          platform_platformChannelId: {
+            platform: channel.platform,
+            platformChannelId: channel.platformId,
+          },
+        },
+        create: {
+          platform: channel.platform,
+          platformChannelId: channel.platformId,
+          name: channel.name,
+          url: channel.url,
+          description: channel.description,
+          thumbnailUrl: channel.thumbnailUrl,
+          customUrl: channel.customUrl,
+          country: channel.country,
+          videoCount: channel.videoCount ?? 0,
+          subscriberCount: channel.subscriberCount ?? 0,
+          viewCount: channel.viewCount ? BigInt(channel.viewCount) : BigInt(0),
+          publishedAt:
+            channelPublishedAtDate && !isNaN(channelPublishedAtDate.getTime())
+              ? channelPublishedAtDate
+              : null,
+        },
+        update: {
+          name: channel.name,
+          url: channel.url,
+          description: channel.description,
+          thumbnailUrl: channel.thumbnailUrl,
+          customUrl: channel.customUrl,
+          country: channel.country,
+          videoCount: channel.videoCount ?? 0,
+          subscriberCount: channel.subscriberCount ?? 0,
+          viewCount: channel.viewCount ? BigInt(channel.viewCount) : BigInt(0),
+          publishedAt:
+            channelPublishedAtDate && !isNaN(channelPublishedAtDate.getTime())
+              ? channelPublishedAtDate
+              : null,
+          updatedAt: new Date(),
+        },
+      });
+      upsertedChannelId = upserted.id;
+    } catch (channelError) {
+      console.error("Error upserting channel:", channelError);
+      // Non-critical error, proceed without channel data
+    }
   }
 
   let transcriptText: string | null = null;
@@ -125,24 +185,35 @@ export async function importYouTubeVideo(
       sourceKeyword: sourceKeyword,
       processedAt: new Date(),
       status: isHowToVWVideo ? VideoStatus.PUBLISHED : VideoStatus.REJECTED,
-      slug: generatedSlug,
-      // Add publishedAt from YouTube video data
-      ...(videoData.publishedAt &&
+      // Only include slug for HowToVW videos
+      ...(isHowToVWVideo && { slug: generatedSlug }),
+      // Add publishedAt from YouTube video data only for HowToVW videos
+      ...(isHowToVWVideo &&
+      videoData.publishedAt &&
       !isNaN(new Date(videoData.publishedAt).getTime())
         ? { publishedAt: new Date(videoData.publishedAt) }
         : {}),
-      // Add direct mapping for stats and score if they exist
-      ...(videoData.popularityScore !== undefined && {
-        popularityScore: videoData.popularityScore,
-      }),
+      // Add popularity score only for HowToVW videos
+      ...(isHowToVWVideo &&
+        videoData.popularityScore !== undefined && {
+          popularityScore: videoData.popularityScore,
+        }),
+
+      // Connect to channel only if it's a HowToVW video and we have a channel ID
+      ...(isHowToVWVideo &&
+        upsertedChannelId && {
+          channel: {
+            connect: { id: upsertedChannelId },
+          },
+        }),
 
       // Conditional fields based on isHowToVWVideo
       ...(isHowToVWVideo && {
         description: videoData.description || "",
         url: `https://www.youtube.com/watch?v=${videoData.id}`,
         thumbnailUrl: videoData.thumbnailUrl,
-        channelTitle: videoData.channelTitle,
-        channelUrl: videoData.channelUrl,
+        // channelTitle: videoData.channelTitle, // Removed
+        // channelUrl: videoData.channelUrl, // Removed
         transcript: transcriptText,
       }),
     };

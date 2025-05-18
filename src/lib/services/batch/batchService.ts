@@ -169,13 +169,80 @@ export async function batchImportVideos(
           videoCreateData.description = video.description || "";
           videoCreateData.url = `https://www.youtube.com/watch?v=${video.id}`;
           videoCreateData.thumbnailUrl = video.thumbnailUrl;
-          videoCreateData.channelTitle = video.channelTitle;
-          videoCreateData.channelUrl = video.channelUrl;
           videoCreateData.slug = slugify(video.title, {
             lower: true,
             strict: true,
           });
           videoCreateData.transcript = transcriptText;
+
+          // Handle channel data if available
+          if (video.channel) {
+            const channel = video.channel;
+            const channelPublishedAtDate = channel.publishedAt
+              ? new Date(channel.publishedAt)
+              : null;
+
+            try {
+              const upsertedChannel = await prisma.channel.upsert({
+                where: {
+                  platform_platformChannelId: {
+                    platform: channel.platform,
+                    platformChannelId: channel.platformId,
+                  },
+                },
+                create: {
+                  platform: channel.platform,
+                  platformChannelId: channel.platformId,
+                  name: channel.name,
+                  url: channel.url,
+                  description: channel.description,
+                  thumbnailUrl: channel.thumbnailUrl,
+                  customUrl: channel.customUrl,
+                  country: channel.country,
+                  videoCount: channel.videoCount ?? 0,
+                  subscriberCount: channel.subscriberCount ?? 0,
+                  viewCount: channel.viewCount
+                    ? BigInt(channel.viewCount)
+                    : BigInt(0),
+                  publishedAt:
+                    channelPublishedAtDate &&
+                    !isNaN(channelPublishedAtDate.getTime())
+                      ? channelPublishedAtDate
+                      : null,
+                },
+                update: {
+                  name: channel.name,
+                  url: channel.url,
+                  description: channel.description,
+                  thumbnailUrl: channel.thumbnailUrl,
+                  customUrl: channel.customUrl,
+                  country: channel.country,
+                  videoCount: channel.videoCount ?? 0,
+                  subscriberCount: channel.subscriberCount ?? 0,
+                  viewCount: channel.viewCount
+                    ? BigInt(channel.viewCount)
+                    : BigInt(0),
+                  publishedAt:
+                    channelPublishedAtDate &&
+                    !isNaN(channelPublishedAtDate.getTime())
+                      ? channelPublishedAtDate
+                      : null,
+                  updatedAt: new Date(),
+                },
+              });
+
+              // Connect the video to the channel
+              videoCreateData.channel = {
+                connect: { id: upsertedChannel.id },
+              };
+            } catch (channelError) {
+              console.error(
+                "Error upserting channel during batch import:",
+                channelError,
+              );
+              // Non-critical for batch import, video can still be created
+            }
+          }
 
           // Add publishedAt from YouTube video data
           if (

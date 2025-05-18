@@ -24,7 +24,7 @@ import {
   ImportVideoResponse,
   OpenAIAnalysisResponse,
   ImportYouTubeVideoPayload,
-} from "@/app/admin/youtube-import/_actions/importActions";
+} from "@/app/admin/import-videos/_actions/importActions";
 
 const AUTO_GENERATED_CATEGORY_VALUE = "auto-generated-openai";
 

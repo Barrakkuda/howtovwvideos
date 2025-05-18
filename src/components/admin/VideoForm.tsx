@@ -16,7 +16,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronsUpDown, Loader2, Info } from "lucide-react";
+import { ChevronsUpDown, Loader2 } from "lucide-react";
 import { XIcon } from "lucide-react";
 import {
   getVideoTranscript,
@@ -44,7 +43,7 @@ import {
   refetchVideoInfo,
   recalculateVideoPopularityScore,
 } from "@/app/admin/videos/_actions/videoActions";
-import { OpenAIAnalysisResponse } from "@/app/admin/youtube-import/_actions/importActions";
+import { OpenAIAnalysisResponse } from "@/app/admin/import-videos/_actions/importActions";
 import { formatDate } from "@/lib/utils/formatters";
 
 interface VideoFormProps {
@@ -81,7 +80,7 @@ export default function VideoForm({
   // Format publishedAt for display if available
   const displayPublishedAt = initialData?.publishedAt
     ? formatDate(initialData.publishedAt)
-    : "N/A";
+    : "";
 
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema) as unknown as Resolver<VideoFormData>,
@@ -94,8 +93,7 @@ export default function VideoForm({
           url: initialData.url ?? "",
           slug: initialData.slug ?? "",
           thumbnailUrl: initialData.thumbnailUrl ?? "",
-          channelTitle: initialData.channelTitle ?? "",
-          channelUrl: initialData.channelUrl ?? "",
+          channelData: initialData.channelData,
           categoryIds: initialData.categoryIds || [],
           status: initialData.status ?? VideoStatus.DRAFT,
           tags: initialData.tags || [],
@@ -112,8 +110,7 @@ export default function VideoForm({
           url: "",
           slug: "",
           thumbnailUrl: "",
-          channelTitle: "",
-          channelUrl: "",
+          channelData: undefined,
           categoryIds: [],
           status: VideoStatus.DRAFT,
           tags: [],
@@ -496,12 +493,20 @@ export default function VideoForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="channelTitle"
-            render={({ field }) => (
+            name="channelData.name"
+            render={() => (
               <FormItem>
-                <FormLabel>Channel Title (Optional)</FormLabel>
+                <FormLabel>Channel Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Channel Name" {...field} />
+                  <Input
+                    value={
+                      initialData?.channelData?.name ||
+                      "No channel data available"
+                    }
+                    disabled
+                    readOnly
+                    className="bg-muted"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -510,14 +515,19 @@ export default function VideoForm({
 
           <FormField
             control={form.control}
-            name="channelUrl"
-            render={({ field }) => (
+            name="channelData.url"
+            render={() => (
               <FormItem>
-                <FormLabel>Channel URL (Optional)</FormLabel>
+                <FormLabel>Channel URL</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="https://www.youtube.com/channel/..."
-                    {...field}
+                    value={
+                      initialData?.channelData?.url ||
+                      "No channel data available"
+                    }
+                    disabled
+                    readOnly
+                    className="bg-muted"
                   />
                 </FormControl>
                 <FormMessage />
@@ -758,10 +768,11 @@ export default function VideoForm({
                         value={
                           currentPopularityScore === null ||
                           currentPopularityScore === undefined
-                            ? "N/A"
+                            ? ""
                             : currentPopularityScore.toFixed(4)
                         }
                         readOnly
+                        disabled
                         className="flex-grow bg-background"
                       />
                       <Button
@@ -778,37 +789,23 @@ export default function VideoForm({
                       </Button>
                     </div>
                   </FormControl>
-                  <FormDescription className="mt-2 text-xs">
-                    <Info className="inline-block h-3 w-3 mr-1 flex-shrink-0" />
-                    <span>
-                      Based on views, likes, and age. Higher is more popular.
-                      Auto-updates periodically.
-                    </span>
-                  </FormDescription>
-                  <FormMessage />{" "}
-                  {/* In case of future validation on this field */}
                 </FormItem>
               )}
             />
           )}
 
           {/* Published At Display Section - Using FormField */}
-          {(dbVideoId || initialData?.id) && initialData?.publishedAt && (
+          {(dbVideoId || initialData?.id) && (
             <FormField
               control={form.control}
               name="publishedAt" // Connects to schema
               render={() => (
                 // { field: _field_publishedAt }, // field marked as unused - REMOVED
                 <FormItem>
-                  <FormLabel>Originally Published (YouTube)</FormLabel>
+                  <FormLabel>Published Date (YouTube)</FormLabel>
                   <FormControl className="flex-grow">
-                    <Input value={displayPublishedAt} readOnly />
+                    <Input value={displayPublishedAt} readOnly disabled />
                   </FormControl>
-                  <FormDescription className="mt-2 text-xs">
-                    The original publication date of the video on YouTube.
-                  </FormDescription>
-                  <FormMessage />{" "}
-                  {/* In case of future validation on this field */}
                 </FormItem>
               )}
             />
