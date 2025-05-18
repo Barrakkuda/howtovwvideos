@@ -38,5 +38,18 @@ export function formatDate(date: Date | string | number): string {
   }
 }
 
-// You can add other formatting functions here in the future, e.g.:
-// export const formatVWType = (type: VWType): string => { ... };
+export function formatNumber(num: number | null | undefined): string {
+  if (num === null || num === undefined) return "0";
+
+  const absNum = Math.abs(num);
+  if (absNum >= 1e9) {
+    return (num / 1e9).toFixed(1) + "B";
+  }
+  if (absNum >= 1e6) {
+    return (num / 1e6).toFixed(1) + "M";
+  }
+  if (absNum >= 1e3) {
+    return (num / 1e3).toFixed(1) + "K";
+  }
+  return num.toString();
+}

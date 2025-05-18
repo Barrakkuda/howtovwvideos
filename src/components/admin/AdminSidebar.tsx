@@ -8,6 +8,7 @@ import {
   Wrench,
   Tag,
   Search,
+  Video,
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -59,6 +60,15 @@ export default function AdminSidebar() {
             >
               <Tag className="h-5 w-5" />
               <span>Tags</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/admin/channels"
+              className="flex items-center space-x-2 py-2 px-3 rounded hover:bg-sidebar-accent"
+            >
+              <Video className="h-5 w-5" />
+              <span>Channels</span>
             </Link>
           </li>
           <li>
