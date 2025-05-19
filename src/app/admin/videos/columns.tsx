@@ -47,8 +47,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
         className="translate-y-[2px]"
       />
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: "id",
@@ -64,7 +62,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
     cell: ({ row }) => (
       <div className="w-[80px] font-mono">{row.getValue("id")}</div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "videoId",
@@ -80,7 +77,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
     cell: ({ row }) => (
       <div className="w-[120px] font-mono">{row.getValue("videoId")}</div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "title",
@@ -105,7 +101,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
         </span>
       </div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "slug",
@@ -113,7 +108,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
     cell: ({ row }) => (
       <div className="font-mono text-xs">{row.getValue("slug")}</div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "categories",
@@ -140,8 +134,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
       );
     },
     filterFn: "arrIncludesSome",
-    enableGlobalFilter: false,
-    enableSorting: false,
   },
   {
     accessorKey: "vwTypes",
@@ -168,9 +160,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
       );
     },
     filterFn: "arrIncludesSome",
-    enableSorting: false,
-    enableHiding: true,
-    enableGlobalFilter: false,
   },
   {
     accessorKey: "popularityScore",
@@ -191,8 +180,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
         </div>
       );
     },
-    enableSorting: true,
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "status",
@@ -214,7 +201,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
       );
     },
     filterFn: "arrIncludesSome",
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "createdAt",
@@ -232,7 +218,6 @@ export const columns: ColumnDef<VideoForTable>[] = [
         {new Date(row.original.createdAt).toLocaleDateString()}
       </div>
     ),
-    enableGlobalFilter: false,
   },
   {
     id: "actions",
@@ -289,7 +274,5 @@ export const columns: ColumnDef<VideoForTable>[] = [
         </div>
       );
     },
-    enableSorting: false,
-    enableHiding: false,
   },
 ];

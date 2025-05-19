@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { Channel, VideoPlatform } from "@generated/prisma";
+import slugify from "slugify";
 
 // Validation schema for channel data
 const channelSchema = z.object({
@@ -104,6 +105,7 @@ export async function addChannel(
         name: data.name,
         platform: VideoPlatform.YOUTUBE,
         platformChannelId: data.platformChannelId,
+        slug: slugify(data.name, { lower: true, strict: true }),
         url: data.url,
         thumbnailUrl: data.thumbnailUrl || undefined,
         subscriberCount: data.subscriberCount || 0,
@@ -173,6 +175,7 @@ export async function updateChannel(
       where: { id },
       data: {
         name: data.name,
+        slug: slugify(data.name, { lower: true, strict: true }),
         platform: VideoPlatform.YOUTUBE,
         platformChannelId: data.platformChannelId,
         url: data.url,

@@ -49,8 +49,6 @@ export const columns = (
         className="translate-y-[2px]"
       />
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: "id",
@@ -66,7 +64,6 @@ export const columns = (
     cell: ({ row }) => (
       <div className="w-[50px] font-mono text-xs">{row.getValue("id")}</div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "name",
@@ -91,25 +88,38 @@ export const columns = (
         </Button>
       );
     },
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "slug",
-    header: "Slug",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Slug
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="font-mono text-xs">{row.getValue("slug")}</div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Description
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="max-w-xs truncate text-sm text-muted-foreground">
         {row.getValue("description") || "-"}
       </div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "videoCount",
@@ -128,8 +138,6 @@ export const columns = (
         <div className="text-center w-full">{row.original.videoCount}</div>
       </div>
     ),
-    enableGlobalFilter: false,
-    enableSorting: true,
   },
   {
     accessorKey: "sortOrder",
@@ -146,7 +154,6 @@ export const columns = (
     cell: ({ row }) => (
       <div className="text-center w-full">{row.getValue("sortOrder")}</div>
     ),
-    enableGlobalFilter: false,
   },
   {
     id: "actions",
@@ -176,8 +183,6 @@ export const columns = (
         </div>
       );
     },
-    enableSorting: false,
-    enableHiding: false,
   },
 ];
 

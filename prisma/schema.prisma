@@ -138,6 +138,7 @@ model Channel {
   thumbnailUrl      String?
   customUrl         String? // Optional custom URL (e.g. youtube.com/c/ChannelName)
   country           String? // Optional channel country
+  slug              String        @unique // URL-friendly version of the name
 
   videoCount      Int?    @default(0)
   subscriberCount Int?    @default(0)

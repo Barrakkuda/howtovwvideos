@@ -41,8 +41,6 @@ export const getCategoryColumns = ({
         className="translate-y-[2px]"
       />
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: "id",
@@ -60,7 +58,6 @@ export const getCategoryColumns = ({
         {row.getValue("id")}
       </div>
     ),
-    enableGlobalFilter: false,
   },
   {
     accessorKey: "name",
@@ -78,19 +75,33 @@ export const getCategoryColumns = ({
         {row.getValue("name") as string}
       </div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "slug",
-    header: "Slug",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Slug
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="font-mono text-xs">{row.getValue("slug")}</div>
     ),
-    enableGlobalFilter: true,
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Description
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const description = row.getValue("description") as string | null;
       return description ? (
@@ -101,7 +112,22 @@ export const getCategoryColumns = ({
         <span className="text-xs text-muted-foreground italic">None</span>
       );
     },
-    enableGlobalFilter: true,
+  },
+  {
+    accessorKey: "sortOrder",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        className="text-center w-full justify-center"
+      >
+        Sort Order
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => (
+      <div className="text-center w-full">{row.getValue("sortOrder")}</div>
+    ),
   },
   {
     accessorKey: "videoCount",
@@ -121,7 +147,6 @@ export const getCategoryColumns = ({
         {row.getValue("videoCount")}
       </div>
     ),
-    enableGlobalFilter: false,
   },
   {
     accessorKey: "createdAt",
@@ -150,7 +175,6 @@ export const getCategoryColumns = ({
         </span>
       );
     },
-    enableGlobalFilter: false,
   },
   {
     id: "actions",
@@ -182,7 +206,5 @@ export const getCategoryColumns = ({
         </div>
       );
     },
-    enableSorting: false,
-    enableHiding: false,
   },
 ];

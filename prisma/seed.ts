@@ -1,6 +1,4 @@
-import { PrismaClient, VideoStatus, VideoPlatform } from "../generated/prisma"; // Adjust path if your client is elsewhere
-// If your Prisma client is in node_modules/.prisma/client, the import would be:
-// import { PrismaClient, VideoStatus } from '@prisma/client';
+import { PrismaClient } from "../generated/prisma";
 
 const prisma = new PrismaClient();
 
@@ -8,40 +6,156 @@ async function main() {
   console.log(`Start seeding ...`);
 
   // Clear existing data
-  // Delete videos first due to foreign key constraint with categories
-  console.log("Deleting existing videos...");
-  await prisma.video.deleteMany({});
-
   console.log("Deleting existing categories...");
   await prisma.category.deleteMany({});
+
+  console.log("Deleting existing vwTypes...");
+  await prisma.vWType.deleteMany({});
 
   console.log("Existing data cleared.");
 
   // Create Categories
   const category1 = await prisma.category.upsert({
-    where: { name: "Tutorials" },
+    where: { name: "Body" },
     update: {},
     create: {
-      name: "Tutorials",
-      description: "Step-by-step guides and educational content.",
+      name: "Body",
+      slug: "body",
+      description:
+        "Guides and tips on sheet metal, rust repair, doors, fenders, and paintwork for classic VWs.",
+      sortOrder: 0,
     },
   });
 
   const category2 = await prisma.category.upsert({
-    where: { name: "Product Demos" },
+    where: { name: "Brakes" },
     update: {},
     create: {
-      name: "Product Demos",
-      description: "Showcasing product features and capabilities.",
+      name: "Brakes",
+      slug: "brakes",
+      description:
+        "How-tos and troubleshooting for brakes, master cylinders, and brake lines.",
+      sortOrder: 1,
     },
   });
 
   const category3 = await prisma.category.upsert({
-    where: { name: "Behind the Scenes" },
+    where: { name: "Chassis" },
     update: {},
     create: {
-      name: "Behind the Scenes",
-      description: "A look into the making of our videos and company culture.",
+      name: "Chassis",
+      slug: "chassis",
+      description:
+        "Information on frame, floor pans, and underbody structure specific to air-cooled VWs.",
+      sortOrder: 2,
+    },
+  });
+
+  const category4 = await prisma.category.upsert({
+    where: { name: "Electrical" },
+    update: {},
+    create: {
+      name: "Electrical",
+      slug: "electrical",
+      description:
+        "Wiring, lighting, charging systems, and fixes for 6V and 12V VW electrical issues.",
+      sortOrder: 3,
+    },
+  });
+
+  const category5 = await prisma.category.upsert({
+    where: { name: "Engine" },
+    update: {},
+    create: {
+      name: "Engine",
+      slug: "engine",
+      description:
+        "Maintenance, tuning, rebuilding, and upgrades for classic air-cooled VW engines.",
+      sortOrder: 4,
+    },
+  });
+
+  const category6 = await prisma.category.upsert({
+    where: { name: "Interior" },
+    update: {},
+    create: {
+      name: "Interior",
+      slug: "interior",
+      description:
+        "Restoration and customization of seats, dashboards, carpets, and headliners.",
+      sortOrder: 5,
+    },
+  });
+
+  const category7 = await prisma.category.upsert({
+    where: { name: "Suspension" },
+    update: {},
+    create: {
+      name: "Suspension",
+      slug: "suspension",
+      description:
+        "Repair and modification of beams, shocks, torsion bars, and ride height on VWs.",
+      sortOrder: 6,
+    },
+  });
+
+  const category8 = await prisma.category.upsert({
+    where: { name: "Tools & Procedures" },
+    update: {},
+    create: {
+      name: "Tools & Procedures",
+      slug: "tools-procedures",
+      description:
+        "Essential tools, workshop methods, and best practices for DIY VW repair, maintenance and restoration.",
+      sortOrder: 7,
+    },
+  });
+
+  const category9 = await prisma.category.upsert({
+    where: { name: "Transaxle" },
+    update: {},
+    create: {
+      name: "Transaxle",
+      slug: "transaxle",
+      description:
+        "Work on gearboxes, clutches, shift linkage, and axle setups in vintage VWs.",
+      sortOrder: 8,
+    },
+  });
+
+  const category10 = await prisma.category.upsert({
+    where: { name: "Racing" },
+    update: {},
+    create: {
+      name: "Racing",
+      slug: "racing",
+      description:
+        "Performance tuning, race builds, and event coverage focused on classic VW motorsports.",
+      sortOrder: 9,
+    },
+  });
+
+  const category11 = await prisma.category.upsert({
+    where: { name: "Restorations" },
+    update: {},
+    create: {
+      name: "Restorations",
+      slug: "restorations",
+      description:
+        "Step-by-step restorations, project overviews, and before-and-after builds of vintage VWs.",
+      sortOrder: 10,
+    },
+  });
+
+  const category12 = await prisma.category.upsert({
+    where: { name: "Wheels & Tires" },
+    update: {},
+    create: {
+      name: "Wheels & Tires",
+      slug: "wheels-tires",
+      description:
+        "Wheel alignment, tire selection, and performance upgrades for classic VWs.",
+      sortOrder: 11,
     },
   });
 
@@ -50,96 +164,124 @@ async function main() {
     category1.name,
     category2.name,
     category3.name,
+    category4.name,
+    category5.name,
+    category6.name,
+    category7.name,
+    category8.name,
+    category9.name,
+    category10.name,
+    category11.name,
+    category12.name,
   );
 
-  // Create Videos
-  const videoId1 = Math.random().toString(36).substring(2, 12);
-  const video1 = await prisma.video.upsert({
-    where: { videoId: videoId1 },
+  // Create VW Types
+  const vwType1 = await prisma.vWType.upsert({
+    where: { slug: "beetle" },
     update: {},
     create: {
-      platform: VideoPlatform.YOUTUBE,
-      videoId: videoId1,
-      title: "Next.js 101: The Basics",
-      description: "A beginner-friendly introduction to Next.js.",
-      url: `https://www.youtube.com/watch?v=${videoId1}`,
-      thumbnailUrl: `https://i.ytimg.com/vi/${videoId1}/hqdefault.jpg`,
-      status: VideoStatus.PUBLISHED,
-      categories: {
-        create: [
-          { category: { connect: { id: category1.id } }, assignedBy: "seed" },
-        ],
-      },
-    },
-  });
-
-  const videoId2 = Math.random().toString(36).substring(2, 12);
-  const video2 = await prisma.video.upsert({
-    where: { videoId: videoId2 },
-    update: {},
-    create: {
-      platform: VideoPlatform.YOUTUBE,
-      videoId: videoId2,
-      title: "Setting up Prisma with PostgreSQL",
+      name: "Beetle",
+      slug: "beetle",
       description:
-        "Learn how to quickly set up Prisma ORM with a PostgreSQL database.",
-      url: `https://www.youtube.com/watch?v=${videoId2}`,
-      thumbnailUrl: `https://i.ytimg.com/vi/${videoId2}/hqdefault.jpg`,
-      status: VideoStatus.PUBLISHED,
-      categories: {
-        create: [
-          { category: { connect: { id: category1.id } }, assignedBy: "seed" },
-        ],
-      },
+        "The iconic air-cooled Volkswagen Beetle, from classic split-windows to late models.",
+      sortOrder: 0,
     },
   });
 
-  const videoId3 = Math.random().toString(36).substring(2, 12);
-  const video3 = await prisma.video.upsert({
-    where: { videoId: videoId3 },
+  const vwType2 = await prisma.vWType.upsert({
+    where: { slug: "ghia" },
     update: {},
     create: {
-      platform: VideoPlatform.YOUTUBE,
-      videoId: videoId3,
-      title: "Introducing Feature X!",
-      description: "Check out our latest and greatest Feature X in action.",
-      url: `https://www.youtube.com/watch?v=${videoId3}`,
-      thumbnailUrl: `https://i.ytimg.com/vi/${videoId3}/hqdefault.jpg`,
-      status: VideoStatus.DRAFT,
-      categories: {
-        create: [
-          { category: { connect: { id: category2.id } }, assignedBy: "seed" },
-        ],
-      },
+      name: "Ghia",
+      slug: "ghia",
+      description:
+        "The elegant Karmann Ghia, combining Italian styling with VW reliability.",
+      sortOrder: 1,
     },
   });
 
-  const videoId4 = Math.random().toString(36).substring(2, 12);
-  const video4 = await prisma.video.upsert({
-    where: { videoId: videoId4 },
+  const vwType3 = await prisma.vWType.upsert({
+    where: { slug: "thing" },
     update: {},
     create: {
-      platform: VideoPlatform.YOUTUBE,
-      videoId: videoId4,
-      title: "Team Day Out: Building Together",
-      description: "A glimpse into our recent team-building event.",
-      url: `https://www.youtube.com/watch?v=${videoId4}`,
-      thumbnailUrl: `https://i.ytimg.com/vi/${videoId4}/hqdefault.jpg`,
-      status: VideoStatus.PUBLISHED,
-      categories: {
-        create: [
-          { category: { connect: { id: category3.id } }, assignedBy: "seed" },
-        ],
-      },
+      name: "Thing",
+      slug: "thing",
+      description:
+        "The rugged Type 181, known as the Thing in the US, designed for military and civilian use.",
+      sortOrder: 2,
+    },
+  });
+
+  const vwType4 = await prisma.vWType.upsert({
+    where: { slug: "bus" },
+    update: {},
+    create: {
+      name: "Bus",
+      slug: "bus",
+      description:
+        "The versatile Type 2 Transporter, from early splits to late bays, serving as vans, campers, and more.",
+      sortOrder: 3,
+    },
+  });
+
+  const vwType5 = await prisma.vWType.upsert({
+    where: { slug: "off-road" },
+    update: {},
+    create: {
+      name: "Off-Road",
+      slug: "off-road",
+      description:
+        "VW's off-road vehicles including the Iltis, Syncro, and lifted variants of standard models.",
+      sortOrder: 4,
+    },
+  });
+
+  const vwType6 = await prisma.vWType.upsert({
+    where: { slug: "type-3" },
+    update: {},
+    create: {
+      name: "Type 3",
+      slug: "type-3",
+      description:
+        "The Notchback, Fastback, and Squareback models, featuring the pancake engine.",
+      sortOrder: 5,
+    },
+  });
+
+  const vwType7 = await prisma.vWType.upsert({
+    where: { slug: "type-4" },
+    update: {},
+    create: {
+      name: "Type 4",
+      slug: "type-4",
+      description:
+        "The larger 411/412 models and Porsche 914, sharing the Type 4 engine platform.",
+      sortOrder: 6,
+    },
+  });
+
+  const vwType8 = await prisma.vWType.upsert({
+    where: { slug: "all" },
+    update: {},
+    create: {
+      name: "All",
+      slug: "all",
+      description:
+        "Content applicable to all air-cooled Volkswagen models and platforms.",
+      sortOrder: 7,
     },
   });
 
   console.log(
-    `Created videos:`,
-    video1.title,
-    video2.title,
-    video3.title,
-    video4.title,
+    `Created VW Types:`,
+    vwType1.name,
+    vwType2.name,
+    vwType3.name,
+    vwType4.name,
+    vwType5.name,
+    vwType6.name,
+    vwType7.name,
+    vwType8.name,
   );
 
   console.log(`Seeding finished.`);

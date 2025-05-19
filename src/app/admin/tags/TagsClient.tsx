@@ -303,7 +303,7 @@ export default function AdminTagsPageClient() {
       <DataTable<TagForTable, unknown>
         columns={tagColumns as ColumnDef<TagForTable, unknown>[]}
         data={tags}
-        filterColumnPlaceholder="Search by name, slug..."
+        filterColumnPlaceholder="Search tags..."
         facetFilters={[]}
         sorting={sorting}
         onSortingChange={setSorting}

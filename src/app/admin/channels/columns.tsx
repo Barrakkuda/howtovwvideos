@@ -109,8 +109,6 @@ export const columns: ColumnDef<Channel>[] = [
         className="translate-y-[2px]"
       />
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: "id",
@@ -128,7 +126,6 @@ export const columns: ColumnDef<Channel>[] = [
         {row.getValue("id")}
       </div>
     ),
-    enableGlobalFilter: false,
   },
   {
     accessorKey: "name",

@@ -39,8 +39,6 @@ export const createTagColumns = (
         className="translate-y-[2px]"
       />
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: "id",
@@ -91,13 +89,20 @@ export const createTagColumns = (
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Description
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="text-sm text-muted-foreground">
         {truncateText(row.original.description, 75)}
       </div>
     ),
-    enableSorting: false,
   },
   {
     accessorKey: "videoCount",
@@ -163,7 +168,5 @@ export const createTagColumns = (
         </div>
       );
     },
-    enableSorting: false,
-    enableHiding: false,
   },
 ];

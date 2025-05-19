@@ -449,6 +449,7 @@ export async function refetchVideoInfo(youtubeVideoId: string) {
             platform: channel.platform,
             platformChannelId: channel.platformId,
             name: channel.name,
+            slug: slugify(channel.name, { lower: true, strict: true }),
             url: channel.url,
             description: channel.description,
             thumbnailUrl: channel.thumbnailUrl,

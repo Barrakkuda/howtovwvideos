@@ -548,7 +548,7 @@ export default function AdminVideosPageClient() {
       <DataTable<VideoForTable, unknown>
         columns={columns as ColumnDef<VideoForTable, unknown>[]}
         data={videos}
-        filterColumnPlaceholder="Search in title and video ID..."
+        filterColumnPlaceholder="Search videos..."
         facetFilters={facetFilters}
         sorting={sorting}
         onSortingChange={setSorting}
